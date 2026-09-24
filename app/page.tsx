@@ -14,11 +14,18 @@ const challenges = [
 ];
 
 const faculties = [
-  { rank: 1, name: 'College of Engineering', points: 12840, badge: 'ENG', color: '#7b68a8' },
-  { rank: 2, name: 'College of Arts & Sciences', points: 11620, badge: 'CAS', color: '#2f7e74' },
-  { rank: 3, name: 'Questrom School of Business', points: 10450, badge: 'QST', color: '#bd7358' },
-  { rank: 4, name: 'College of Communication', points: 9210, badge: 'COM', color: '#5878a9' },
-  { rank: 5, name: 'Sargent College', points: 8760, badge: 'SAR', color: '#9a7d44' },
+  { rank: 1, name: 'College of Arts & Sciences', points: 14820, badge: 'CAS', color: '#2f7e74' },
+  { rank: 2, name: 'Questrom School of Business', points: 13740, badge: 'QST', color: '#bd7358' },
+  { rank: 3, name: 'College of Engineering', points: 12840, badge: 'ENG', color: '#7b68a8' },
+  { rank: 4, name: 'College of Communication', points: 11620, badge: 'COM', color: '#5878a9' },
+  { rank: 5, name: 'Sargent College of Health & Rehabilitation Sciences', points: 10450, badge: 'SAR', color: '#9a7d44' },
+  { rank: 6, name: 'Faculty of Computing & Data Sciences', points: 9780, badge: 'CDS', color: '#527d91' },
+  { rank: 7, name: 'College of Fine Arts', points: 9210, badge: 'CFA', color: '#a15e73' },
+  { rank: 8, name: 'Wheelock College of Education & Human Development', points: 8760, badge: 'WED', color: '#63875b' },
+  { rank: 9, name: 'Frederick S. Pardee School of Global Studies', points: 8190, badge: 'PAR', color: '#846d9d' },
+  { rank: 10, name: 'College of General Studies', points: 7640, badge: 'CGS', color: '#a06c4c' },
+  { rank: 11, name: 'School of Hospitality Administration', points: 6980, badge: 'SHA', color: '#477b78' },
+  { rank: 12, name: 'Arvind and Chandan Nandlal Kilachand Honors College', points: 6250, badge: 'KHC', color: '#756c62' },
 ];
 
 export default function WellbeingApp() {
@@ -74,7 +81,7 @@ function Challenges({ completed, onToggle }: { completed: number[]; onToggle: (i
 }
 
 function Ranking() {
-  return <div className="page ranking-page"><Header title="College ranking" /><div className="ranking-hero"><span>WEEK 2</span><strong>52,880</strong><p>community points earned</p><div className="sparkles">✦　·　✦</div></div><div className="ranking-label"><span>RANK</span><span>COLLEGE</span><span>POINTS</span></div><div className="ranking-list">{faculties.map((faculty) => <article key={faculty.rank} className={faculty.rank === 1 ? 'your-faculty' : ''}><strong className="rank-number">{faculty.rank}</strong><span className="faculty-badge" style={{background: faculty.color}}>{faculty.badge}</span><div><h3>{faculty.name}</h3>{faculty.rank === 1 && <p>Your college</p>}</div><strong className="faculty-points">{faculty.points.toLocaleString()}</strong></article>)}</div><p className="ranking-note">Rankings refresh every hour. Complete a challenge to help your college move up.</p></div>;
+  return <div className="page ranking-page"><Header title="College ranking" /><div className="ranking-hero"><span>WEEK 2</span><strong>118,280</strong><p>community points earned</p><div className="sparkles">✦　·　✦</div></div><div className="ranking-label"><span>RANK</span><span>COLLEGE</span><span>POINTS</span></div><div className="ranking-list">{faculties.map((faculty) => <article key={faculty.rank} className={faculty.badge === 'ENG' ? 'your-faculty' : ''}><strong className="rank-number">{faculty.rank}</strong><span className="faculty-badge" style={{background: faculty.color}}>{faculty.badge}</span><div><h3>{faculty.name}</h3>{faculty.badge === 'ENG' && <p>Your college</p>}</div><strong className="faculty-points">{faculty.points.toLocaleString()}</strong></article>)}</div><p className="ranking-note">Rankings refresh every hour. Complete a challenge to help your college move up.</p></div>;
 }
 
 function Profile({ totalPoints, completed }: { totalPoints: number; completed: number }) {
