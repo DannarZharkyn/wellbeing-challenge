@@ -4,13 +4,37 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 type Tab = 'home' | 'challenges' | 'ranking' | 'profile';
+type Category = 'Movement' | 'Mindfulness' | 'Connection' | 'Nutrition' | 'Rest & Recovery';
+
+const categoryStyles: Record<Category, { icon: string; color: string }> = {
+  Movement: { icon: '↗', color: '#4f806b' },
+  Mindfulness: { icon: '◌', color: '#7b68a8' },
+  Connection: { icon: '♧', color: '#5878a9' },
+  Nutrition: { icon: '⌁', color: '#bd7358' },
+  'Rest & Recovery': { icon: '☾', color: '#536c85' },
+};
+
+const badgeLevels = [
+  { required: 1, label: 'Starter' },
+  { required: 5, label: 'Intermediate' },
+  { required: 15, label: 'Advanced' },
+];
+
+const badgeNames: Record<Category, string[]> = {
+  Movement: ['First Step', 'Trail Maker', 'Movement Champion'],
+  Mindfulness: ['Quiet Moment', 'Clear Mind', 'Mindfulness Master'],
+  Connection: ['Friendly Hello', 'Community Builder', 'Connection Champion'],
+  Nutrition: ['Fresh Start', 'Healthy Choice', 'Nutrition Hero'],
+  'Rest & Recovery': ['Time to Pause', 'Rest Routine', 'Recovery Pro'],
+};
 
 const challenges = [
-  { id: 1, icon: '☀', title: 'Walk outside', detail: 'Fresh air, fresh perspective', info: 'Step away from your desk and take an easy walk outdoors. Notice the air, the sounds around you, and how your body feels as you move.', duration: 10, points: 50, color: 'mint' },
-  { id: 2, icon: '♧', title: 'Run with a friend', detail: 'Wellbeing is better together', info: 'Invite a friend or classmate for a relaxed run. Keep a pace where you can still talk and encourage each other along the way.', duration: 20, points: 100, color: 'blue' },
-  { id: 3, icon: '◌', title: 'Take a breathing break', detail: 'Reset and refocus your mind', info: 'Find a comfortable seat. Breathe in slowly for four counts, pause, then breathe out for four counts. Let your shoulders relax.', duration: 5, points: 40, color: 'lavender' },
-  { id: 4, icon: '✦', title: 'Practice gratitude', detail: 'A small moment of positivity', info: 'Think of one specific thing you appreciate today. Write it down or share it with someone who helped make it happen.', duration: 3, points: 30, color: 'peach' },
-  { id: 5, icon: '⌁', title: 'Take a water break', detail: 'A simple healthy reset', info: 'Fill a glass or bottle with water, step away from your screen, and take a quiet moment to hydrate without distractions.', duration: 2, points: 25, color: 'aqua' },
+  { id: 1, icon: '☀', title: 'Walk outside', detail: 'Fresh air, fresh perspective', info: 'Step away from your desk and take an easy walk outdoors. Notice the air, the sounds around you, and how your body feels as you move.', category: 'Movement' as Category, duration: 10, points: 50, color: 'mint' },
+  { id: 2, icon: '♧', title: 'Run with a friend', detail: 'Wellbeing is better together', info: 'Invite a friend or classmate for a relaxed run. Keep a pace where you can still talk and encourage each other along the way.', category: 'Connection' as Category, duration: 20, points: 100, color: 'blue' },
+  { id: 3, icon: '◌', title: 'Take a breathing break', detail: 'Reset and refocus your mind', info: 'Find a comfortable seat. Breathe in slowly for four counts, pause, then breathe out for four counts. Let your shoulders relax.', category: 'Mindfulness' as Category, duration: 5, points: 40, color: 'lavender' },
+  { id: 4, icon: '✦', title: 'Practice gratitude', detail: 'A small moment of positivity', info: 'Think of one specific thing you appreciate today. Write it down or share it with someone who helped make it happen.', category: 'Connection' as Category, duration: 3, points: 30, color: 'peach' },
+  { id: 5, icon: '⌁', title: 'Take a water break', detail: 'A simple healthy reset', info: 'Fill a glass or bottle with water, step away from your screen, and take a quiet moment to hydrate without distractions.', category: 'Nutrition' as Category, duration: 2, points: 25, color: 'aqua' },
+  { id: 6, icon: '☾', title: 'Evening screen break', detail: 'Make space for better rest', info: 'Put your phone and laptop away. Lower the lights, stretch gently, or prepare for tomorrow while your mind winds down.', category: 'Rest & Recovery' as Category, duration: 15, points: 60, color: 'rest' },
 ];
 
 const faculties = [
@@ -45,7 +69,7 @@ export default function WellbeingApp() {
           {tab === 'home' && <Home totalPoints={totalPoints} completed={completed.length} onExplore={() => setTab('challenges')} />}
           {tab === 'challenges' && (selectedChallenge ? <ChallengeDetail challenge={challenges.find((item) => item.id === selectedChallenge)!} completed={completed.includes(selectedChallenge)} onBack={() => setSelectedChallenge(null)} onComplete={() => { if (!completed.includes(selectedChallenge)) toggleChallenge(selectedChallenge); }} /> : <Challenges completed={completed} onOpen={setSelectedChallenge} />)}
           {tab === 'ranking' && <Ranking />}
-          {tab === 'profile' && <Profile totalPoints={totalPoints} completed={completed.length} />}
+          {tab === 'profile' && <Profile totalPoints={totalPoints} completed={completed} />}
         </section>
         <nav className="bottom-nav" aria-label="Main navigation">
           <NavButton label="Home" icon="⌂" active={tab === 'home'} onClick={() => setTab('home')} />
@@ -77,7 +101,7 @@ function Challenges({ completed, onOpen }: { completed: number[]; onOpen: (id: n
   return <div className="page"><Header title="Challenges" />
     <div className="filter-row"><button className="filter active">All</button><button className="filter">Movement</button><button className="filter">Mind</button><button className="filter">Social</button></div>
     <div className="challenge-summary"><div><strong>{completed.length}/{challenges.length}</strong><span>completed this week</span></div><div className="tiny-bar"><i style={{width: `${completed.length/challenges.length*100}%`}}/></div></div>
-    <div className="challenge-list">{challenges.map((challenge) => { const done = completed.includes(challenge.id); return <article className={`challenge-card ${done ? 'done' : ''}`} key={challenge.id}><div className={`challenge-icon ${challenge.color}`}>{challenge.icon}</div><div className="challenge-copy"><h3>{challenge.title}</h3><p>{challenge.detail}</p><div className="challenge-meta"><span>◷ {challenge.duration} min</span><span>+{challenge.points} pts</span></div></div><button className="open-challenge" aria-label={`Open ${challenge.title}`} onClick={() => onOpen(challenge.id)}>{done ? '✓' : '›'}</button></article>; })}</div>
+    <div className="challenge-list">{challenges.map((challenge) => { const done = completed.includes(challenge.id); return <article className={`challenge-card ${done ? 'done' : ''}`} key={challenge.id}><div className={`challenge-icon ${challenge.color}`}>{challenge.icon}</div><div className="challenge-copy"><span className="category-label" style={{color: categoryStyles[challenge.category].color}}>{challenge.category}</span><h3>{challenge.title}</h3><p>{challenge.detail}</p><div className="challenge-meta"><span>◷ {challenge.duration} min</span><span>+{challenge.points} pts</span></div></div><button className="open-challenge" aria-label={`Open ${challenge.title}`} onClick={() => onOpen(challenge.id)}>{done ? '✓' : '›'}</button></article>; })}</div>
   </div>;
 }
 
@@ -108,7 +132,7 @@ function ChallengeDetail({ challenge, completed, onBack, onComplete }: { challen
     <button className="back-button" onClick={onBack}>← <span>Challenges</span></button>
     <div className={`detail-icon ${challenge.color}`}>{challenge.icon}</div>
     <h1>{challenge.title}</h1>
-    <div className="detail-tags"><span>◷ {challenge.duration} minutes</span><span>✦ {challenge.points} points</span></div>
+    <div className="detail-tags"><span>{categoryStyles[challenge.category].icon} {challenge.category}</span><span>◷ {challenge.duration} minutes</span><span>✦ {challenge.points} points</span></div>
     <p className="detail-description">{challenge.info}</p>
     <section className={`timer-card ${running ? 'timer-running' : ''}`}>
       <p>{finished ? 'Challenge complete!' : running ? 'Time remaining' : completed ? 'Completed' : 'Ready when you are'}</p>
@@ -124,8 +148,14 @@ function Ranking() {
   return <div className="page ranking-page"><Header title="College ranking" /><div className="ranking-hero"><span>WEEK 2</span><strong>118,280</strong><p>community points earned</p><div className="sparkles">✦　·　✦</div></div><div className="ranking-label"><span>RANK</span><span>COLLEGE</span><span>POINTS</span></div><div className="ranking-list">{faculties.map((faculty) => <article key={faculty.rank} className={faculty.badge === 'ENG' ? 'your-faculty' : ''}><strong className="rank-number">{faculty.rank}</strong><span className="faculty-badge" style={{background: faculty.color}}>{faculty.badge}</span><div><h3>{faculty.name}</h3>{faculty.badge === 'ENG' && <p>Your college</p>}</div><strong className="faculty-points">{faculty.points.toLocaleString()}</strong></article>)}</div><p className="ranking-note">Rankings refresh every hour. Complete a challenge to help your college move up.</p></div>;
 }
 
-function Profile({ totalPoints, completed }: { totalPoints: number; completed: number }) {
-  return <div className="page profile-page"><Header title="Profile" /><section className="profile-card"><div className="avatar">DZ</div><h2>Dannar Zharkyn</h2><p>College of Engineering</p><span>Challenge participant</span></section><div className="stats-grid"><article><span>✦</span><strong>{totalPoints.toLocaleString()}</strong><p>Total points</p></article><article><span>✓</span><strong>{completed}</strong><p>Completed</p></article><article><span>↗</span><strong>7</strong><p>Day streak</p></article></div><section className="achievement-section"><div className="section-title compact"><div><p className="eyebrow">MILESTONES</p><h2>Your badges</h2></div><span>3 earned</span></div><div className="badges"><div><i>☀</i><span>Early bird</span></div><div><i>♧</i><span>Team player</span></div><div><i>7</i><span>7-day streak</span></div><div className="locked"><i>?</i><span>Keep going</span></div></div></section><section className="profile-menu"><button><span>◎</span><div><strong>My activity</strong><small>See your challenge history</small></div><b>›</b></button><button><span>⚙</span><div><strong>Settings</strong><small>Notifications and preferences</small></div><b>›</b></button></section></div>;
+function Profile({ totalPoints, completed }: { totalPoints: number; completed: number[] }) {
+  const categoryCounts = challenges.reduce((counts, challenge) => {
+    if (completed.includes(challenge.id)) counts[challenge.category] += 1;
+    return counts;
+  }, { Movement: 0, Mindfulness: 0, Connection: 0, Nutrition: 0, 'Rest & Recovery': 0 } as Record<Category, number>);
+  const earned = Object.values(categoryCounts).reduce((sum, count) => sum + badgeLevels.filter((level) => count >= level.required).length, 0);
+
+  return <div className="page profile-page"><Header title="Profile" /><section className="profile-card"><div className="avatar">DZ</div><h2>Dannar Zharkyn</h2><p>College of Engineering</p><span>Challenge participant</span></section><div className="stats-grid"><article><span>✦</span><strong>{totalPoints.toLocaleString()}</strong><p>Total points</p></article><article><span>✓</span><strong>{completed.length}</strong><p>Completed</p></article><article><span>↗</span><strong>7</strong><p>Day streak</p></article></div><section className="achievement-section"><div className="section-title compact"><div><h2>Badge collection</h2></div><span>{earned} of 15 earned</span></div><p className="badge-intro">Complete challenges in each category to unlock all three badge levels.</p><div className="badge-catalog">{(Object.keys(badgeNames) as Category[]).map((category) => <section className="badge-category" key={category}><div className="badge-category-title"><i style={{background: categoryStyles[category].color}}>{categoryStyles[category].icon}</i><div><h3>{category}</h3><p>{categoryCounts[category]} completed</p></div></div><div className="badge-levels">{badgeLevels.map((level, index) => { const unlocked = categoryCounts[category] >= level.required; const progress = Math.min(100, categoryCounts[category] / level.required * 100); return <article className={unlocked ? 'badge-earned' : 'badge-locked'} key={level.label}><div className="badge-medallion" style={unlocked ? {background: categoryStyles[category].color} : undefined}>{unlocked ? categoryStyles[category].icon : '○'}</div><div><strong>{badgeNames[category][index]}</strong><span>{unlocked ? 'Earned' : `${categoryCounts[category]}/${level.required} challenges`}</span><div className="badge-progress"><i style={{width: `${progress}%`, background: categoryStyles[category].color}} /></div></div></article>; })}</div></section>)}</div></section></div>;
 }
 
 function NavButton({ label, icon, active, onClick }: { label: string; icon: string; active: boolean; onClick: () => void }) {
