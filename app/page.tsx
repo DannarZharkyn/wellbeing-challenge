@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 type Tab = 'home' | 'challenges' | 'ranking' | 'profile';
 
 const challenges = [
-  { id: 1, icon: '☀', title: 'Walk outside for 10 minutes', detail: 'Fresh air, fresh perspective', points: 50, color: 'mint' },
-  { id: 2, icon: '♧', title: 'Invite a friend for a run', detail: 'Wellbeing is better together', points: 100, color: 'blue' },
-  { id: 3, icon: '◌', title: 'Take a 5-minute breathing break', detail: 'Reset and refocus your mind', points: 40, color: 'lavender' },
-  { id: 4, icon: '✦', title: 'Share one thing you are grateful for', detail: 'A small moment of positivity', points: 30, color: 'peach' },
-  { id: 5, icon: '⌁', title: 'Choose water with your lunch', detail: 'A simple healthy switch', points: 25, color: 'aqua' },
+  { id: 1, icon: '☀', title: 'Walk outside', detail: 'Fresh air, fresh perspective', info: 'Step away from your desk and take an easy walk outdoors. Notice the air, the sounds around you, and how your body feels as you move.', duration: 10, points: 50, color: 'mint' },
+  { id: 2, icon: '♧', title: 'Run with a friend', detail: 'Wellbeing is better together', info: 'Invite a friend or classmate for a relaxed run. Keep a pace where you can still talk and encourage each other along the way.', duration: 20, points: 100, color: 'blue' },
+  { id: 3, icon: '◌', title: 'Take a breathing break', detail: 'Reset and refocus your mind', info: 'Find a comfortable seat. Breathe in slowly for four counts, pause, then breathe out for four counts. Let your shoulders relax.', duration: 5, points: 40, color: 'lavender' },
+  { id: 4, icon: '✦', title: 'Practice gratitude', detail: 'A small moment of positivity', info: 'Think of one specific thing you appreciate today. Write it down or share it with someone who helped make it happen.', duration: 3, points: 30, color: 'peach' },
+  { id: 5, icon: '⌁', title: 'Take a water break', detail: 'A simple healthy reset', info: 'Fill a glass or bottle with water, step away from your screen, and take a quiet moment to hydrate without distractions.', duration: 2, points: 25, color: 'aqua' },
 ];
 
 const faculties = [
@@ -31,6 +31,7 @@ const faculties = [
 export default function WellbeingApp() {
   const [tab, setTab] = useState<Tab>('home');
   const [completed, setCompleted] = useState<number[]>([3, 5]);
+  const [selectedChallenge, setSelectedChallenge] = useState<number | null>(null);
   const totalPoints = 340 + completed.reduce((sum, id) => sum + (challenges.find((c) => c.id === id)?.points ?? 0), 0);
 
   function toggleChallenge(id: number) {
@@ -42,7 +43,7 @@ export default function WellbeingApp() {
       <div className="phone-frame">
         <section className="screen" aria-live="polite">
           {tab === 'home' && <Home totalPoints={totalPoints} completed={completed.length} onExplore={() => setTab('challenges')} />}
-          {tab === 'challenges' && <Challenges completed={completed} onToggle={toggleChallenge} />}
+          {tab === 'challenges' && (selectedChallenge ? <ChallengeDetail challenge={challenges.find((item) => item.id === selectedChallenge)!} completed={completed.includes(selectedChallenge)} onBack={() => setSelectedChallenge(null)} onComplete={() => { if (!completed.includes(selectedChallenge)) toggleChallenge(selectedChallenge); }} /> : <Challenges completed={completed} onOpen={setSelectedChallenge} />)}
           {tab === 'ranking' && <Ranking />}
           {tab === 'profile' && <Profile totalPoints={totalPoints} completed={completed.length} />}
         </section>
@@ -72,11 +73,50 @@ function Home({ totalPoints, completed, onExplore }: { totalPoints: number; comp
   </div>;
 }
 
-function Challenges({ completed, onToggle }: { completed: number[]; onToggle: (id: number) => void }) {
+function Challenges({ completed, onOpen }: { completed: number[]; onOpen: (id: number) => void }) {
   return <div className="page"><Header title="Challenges" />
     <div className="filter-row"><button className="filter active">All</button><button className="filter">Movement</button><button className="filter">Mind</button><button className="filter">Social</button></div>
     <div className="challenge-summary"><div><strong>{completed.length}/{challenges.length}</strong><span>completed this week</span></div><div className="tiny-bar"><i style={{width: `${completed.length/challenges.length*100}%`}}/></div></div>
-    <div className="challenge-list">{challenges.map((challenge) => { const done = completed.includes(challenge.id); return <article className={`challenge-card ${done ? 'done' : ''}`} key={challenge.id}><div className={`challenge-icon ${challenge.color}`}>{challenge.icon}</div><div className="challenge-copy"><h3>{challenge.title}</h3><p>{challenge.detail}</p><span>+{challenge.points} pts</span></div><button className="check-button" aria-label={`${done ? 'Undo' : 'Complete'} ${challenge.title}`} aria-pressed={done} onClick={() => onToggle(challenge.id)}>{done ? '✓' : ''}</button></article>; })}</div>
+    <div className="challenge-list">{challenges.map((challenge) => { const done = completed.includes(challenge.id); return <article className={`challenge-card ${done ? 'done' : ''}`} key={challenge.id}><div className={`challenge-icon ${challenge.color}`}>{challenge.icon}</div><div className="challenge-copy"><h3>{challenge.title}</h3><p>{challenge.detail}</p><div className="challenge-meta"><span>◷ {challenge.duration} min</span><span>+{challenge.points} pts</span></div></div><button className="open-challenge" aria-label={`Open ${challenge.title}`} onClick={() => onOpen(challenge.id)}>{done ? '✓' : '›'}</button></article>; })}</div>
+  </div>;
+}
+
+function ChallengeDetail({ challenge, completed, onBack, onComplete }: { challenge: typeof challenges[number]; completed: boolean; onBack: () => void; onComplete: () => void }) {
+  const totalSeconds = challenge.duration * 60;
+  const [remaining, setRemaining] = useState(totalSeconds);
+  const [running, setRunning] = useState(false);
+  const finished = remaining === 0;
+
+  useEffect(() => {
+    if (!running || remaining <= 0) return;
+    const timer = window.setInterval(() => setRemaining((time) => Math.max(0, time - 1)), 1000);
+    return () => window.clearInterval(timer);
+  }, [running, remaining]);
+
+  useEffect(() => {
+    if (finished && running) {
+      setRunning(false);
+      onComplete();
+    }
+  }, [finished, running, onComplete]);
+
+  const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
+  const seconds = (remaining % 60).toString().padStart(2, '0');
+  const progress = ((totalSeconds - remaining) / totalSeconds) * 100;
+
+  return <div className="page challenge-detail-page">
+    <button className="back-button" onClick={onBack}>← <span>Challenges</span></button>
+    <div className={`detail-icon ${challenge.color}`}>{challenge.icon}</div>
+    <h1>{challenge.title}</h1>
+    <div className="detail-tags"><span>◷ {challenge.duration} minutes</span><span>✦ {challenge.points} points</span></div>
+    <p className="detail-description">{challenge.info}</p>
+    <section className={`timer-card ${running ? 'timer-running' : ''}`}>
+      <p>{finished ? 'Challenge complete!' : running ? 'Time remaining' : completed ? 'Completed' : 'Ready when you are'}</p>
+      <strong>{minutes}:{seconds}</strong>
+      <div className="timer-track"><i style={{width: `${progress}%`}} /></div>
+      {finished || completed ? <button className="primary-timer-button" onClick={onBack}>Back to challenges</button> : running ? <button className="quit-button" onClick={() => { setRunning(false); setRemaining(totalSeconds); }}>Quit challenge</button> : <button className="primary-timer-button" onClick={() => setRunning(true)}>Start challenge</button>}
+    </section>
+    <div className="timer-tip"><span>✓</span><p>Stay on this screen while the timer runs. Your points will be added when it reaches zero.</p></div>
   </div>;
 }
 
