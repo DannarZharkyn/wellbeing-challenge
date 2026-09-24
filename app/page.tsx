@@ -35,6 +35,15 @@ const challenges = [
   { id: 4, icon: '✦', title: 'Practice gratitude', detail: 'A small moment of positivity', info: 'Think of one specific thing you appreciate today. Write it down or share it with someone who helped make it happen.', category: 'Connection' as Category, duration: 3, points: 30, color: 'peach' },
   { id: 5, icon: '⌁', title: 'Take a water break', detail: 'A simple healthy reset', info: 'Fill a glass or bottle with water, step away from your screen, and take a quiet moment to hydrate without distractions.', category: 'Nutrition' as Category, duration: 2, points: 25, color: 'aqua' },
   { id: 6, icon: '☾', title: 'Evening screen break', detail: 'Make space for better rest', info: 'Put your phone and laptop away. Lower the lights, stretch gently, or prepare for tomorrow while your mind winds down.', category: 'Rest & Recovery' as Category, duration: 15, points: 60, color: 'rest' },
+  { id: 7, icon: '↗', title: 'Take the stairs', detail: 'Add movement to your routine', info: 'Choose the stairs instead of the elevator for one trip today. Move at a comfortable pace and notice your breathing.', category: 'Movement' as Category, duration: 5, points: 30, color: 'mint' },
+  { id: 8, icon: '◇', title: 'Desk stretch', detail: 'Release tension between classes', info: 'Stand up and gently stretch your neck, shoulders, back, and legs. Avoid bouncing and keep every movement comfortable.', category: 'Movement' as Category, duration: 7, points: 35, color: 'mint' },
+  { id: 9, icon: '◎', title: 'Mindful observation', detail: 'Notice what is around you', info: 'Choose one nearby object and study its color, shape, texture, and details. When your mind wanders, return your attention to it.', category: 'Mindfulness' as Category, duration: 5, points: 35, color: 'lavender' },
+  { id: 10, icon: '☁', title: 'Guided body scan', detail: 'Reconnect with your body', info: 'Sit comfortably and move your attention slowly from your feet to your head, noticing sensations without trying to change them.', category: 'Mindfulness' as Category, duration: 10, points: 55, color: 'lavender' },
+  { id: 11, icon: '♡', title: 'Check in with someone', detail: 'A small message can matter', info: 'Send a thoughtful message to a friend, classmate, or family member. Ask how they are doing and give them your full attention.', category: 'Connection' as Category, duration: 5, points: 40, color: 'blue' },
+  { id: 12, icon: '♢', title: 'Add fruit to a meal', detail: 'Make one nourishing choice', info: 'Choose a piece of fruit or a serving of berries with a meal or snack. Take a moment to enjoy it without rushing.', category: 'Nutrition' as Category, duration: 5, points: 30, color: 'aqua' },
+  { id: 13, icon: '○', title: 'Plan a balanced lunch', detail: 'Fuel the rest of your day', info: 'Plan a lunch with a source of protein, a grain or starch, and something colorful such as fruit or vegetables.', category: 'Nutrition' as Category, duration: 8, points: 45, color: 'aqua' },
+  { id: 14, icon: '☾', title: 'Quiet reset', detail: 'Pause without a screen', info: 'Find a calm place, silence notifications, and let yourself rest without studying, scrolling, or multitasking.', category: 'Rest & Recovery' as Category, duration: 10, points: 45, color: 'rest' },
+  { id: 15, icon: '⌁', title: 'Prepare for sleep', detail: 'Build a calmer bedtime', info: 'Dim the lights, set out what you need for tomorrow, and choose a consistent time to begin winding down tonight.', category: 'Rest & Recovery' as Category, duration: 12, points: 55, color: 'rest' },
 ];
 
 const faculties = [
@@ -98,10 +107,13 @@ function Home({ totalPoints, completed, onExplore }: { totalPoints: number; comp
 }
 
 function Challenges({ completed, onOpen }: { completed: number[]; onOpen: (id: number) => void }) {
+  const [filter, setFilter] = useState<Category | 'All'>('All');
+  const visibleChallenges = filter === 'All' ? challenges : challenges.filter((challenge) => challenge.category === filter);
+
   return <div className="page"><Header title="Challenges" />
-    <div className="filter-row"><button className="filter active">All</button><button className="filter">Movement</button><button className="filter">Mind</button><button className="filter">Social</button></div>
+    <div className="filter-row">{(['All', ...Object.keys(categoryStyles)] as (Category | 'All')[]).map((category) => <button key={category} className={`filter ${filter === category ? 'active' : ''}`} onClick={() => setFilter(category)}>{category}</button>)}</div>
     <div className="challenge-summary"><div><strong>{completed.length}/{challenges.length}</strong><span>completed this week</span></div><div className="tiny-bar"><i style={{width: `${completed.length/challenges.length*100}%`}}/></div></div>
-    <div className="challenge-list">{challenges.map((challenge) => { const done = completed.includes(challenge.id); return <article className={`challenge-card ${done ? 'done' : ''}`} key={challenge.id}><div className={`challenge-icon ${challenge.color}`}>{challenge.icon}</div><div className="challenge-copy"><span className="category-label" style={{color: categoryStyles[challenge.category].color}}>{challenge.category}</span><h3>{challenge.title}</h3><p>{challenge.detail}</p><div className="challenge-meta"><span>◷ {challenge.duration} min</span><span>+{challenge.points} pts</span></div></div><button className="open-challenge" aria-label={`Open ${challenge.title}`} onClick={() => onOpen(challenge.id)}>{done ? '✓' : '›'}</button></article>; })}</div>
+    <div className="challenge-list">{visibleChallenges.map((challenge) => { const done = completed.includes(challenge.id); return <article className={`challenge-card ${done ? 'done' : ''}`} key={challenge.id}><div className={`challenge-icon ${challenge.color}`}>{challenge.icon}</div><div className="challenge-copy"><span className="category-label" style={{color: categoryStyles[challenge.category].color}}>{challenge.category}</span><h3>{challenge.title}</h3><p>{challenge.detail}</p><div className="challenge-meta"><span>◷ {challenge.duration} min</span><span>+{challenge.points} pts</span></div></div><button className="open-challenge" aria-label={`Open ${challenge.title}`} onClick={() => onOpen(challenge.id)}>{done ? '✓' : '›'}</button></article>; })}</div>
   </div>;
 }
 
