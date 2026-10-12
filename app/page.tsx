@@ -1,191 +1,79 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useState } from 'react';
+import { activities, competitions, dimensionMeta, studentLeaderboard, teamLeaderboard, type Competition, type Dimension } from './prototype-data';
+import { DimensionIcon, Icon, Logo } from './ui';
 
-type Tab = 'home' | 'challenges' | 'ranking' | 'profile';
-type Category = 'Movement' | 'Mindfulness' | 'Connection' | 'Nutrition' | 'Rest & Recovery';
+type StudentTab = 'Home' | 'My Challenges' | 'Explore' | 'Leaderboards' | 'Profile';
 
-const categoryStyles: Record<Category, { icon: string; color: string }> = {
-  Movement: { icon: '↗', color: '#4f806b' },
-  Mindfulness: { icon: '◌', color: '#7b68a8' },
-  Connection: { icon: '♧', color: '#5878a9' },
-  Nutrition: { icon: '⌁', color: '#bd7358' },
-  'Rest & Recovery': { icon: '☾', color: '#536c85' },
-};
+export default function StudentPlatform() {
+  const [tab, setTab] = useState<StudentTab>('Home');
+  const [joined, setJoined] = useState(['fall', 'eng']);
+  const [completed, setCompleted] = useState([3, 11, 13]);
+  const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<(typeof activities)[number] | null>(null);
+  const joinCompetition = (id: string) => setJoined((current) => current.includes(id) ? current : [...current, id]);
+  const finishActivity = (id: number) => setCompleted((current) => current.includes(id) ? current : [...current, id]);
 
-const badgeLevels = [
-  { required: 1, label: 'Starter' },
-  { required: 5, label: 'Intermediate' },
-  { required: 15, label: 'Advanced' },
-];
-
-const badgeNames: Record<Category, string[]> = {
-  Movement: ['First Step', 'Trail Maker', 'Movement Champion'],
-  Mindfulness: ['Quiet Moment', 'Clear Mind', 'Mindfulness Master'],
-  Connection: ['Friendly Hello', 'Community Builder', 'Connection Champion'],
-  Nutrition: ['Fresh Start', 'Healthy Choice', 'Nutrition Hero'],
-  'Rest & Recovery': ['Time to Pause', 'Rest Routine', 'Recovery Pro'],
-};
-
-const badgeImages: Record<Category, string> = {
-  Movement: '/badges/movement.png',
-  Mindfulness: '/badges/mindfulness.png',
-  Connection: '/badges/connection.png',
-  Nutrition: '/badges/nutrition.png',
-  'Rest & Recovery': '/badges/rest-recovery.png',
-};
-
-const categoryLogoImages: Record<Category, string> = {
-  Movement: '/category-logos/movement.png',
-  Mindfulness: '/category-logos/mindfulness.png',
-  Connection: '/category-logos/connection.png',
-  Nutrition: '/category-logos/nutrition.png',
-  'Rest & Recovery': '/category-logos/rest-recovery.png',
-};
-
-const challenges = [
-  { id: 1, icon: '☀', title: 'Walk outside', detail: 'Fresh air, fresh perspective', info: 'Step away from your desk and take an easy walk outdoors. Notice the air, the sounds around you, and how your body feels as you move.', category: 'Movement' as Category, duration: 10, points: 50, color: 'mint' },
-  { id: 2, icon: '♧', title: 'Run with a friend', detail: 'Wellbeing is better together', info: 'Invite a friend or classmate for a relaxed run. Keep a pace where you can still talk and encourage each other along the way.', category: 'Connection' as Category, duration: 20, points: 100, color: 'blue' },
-  { id: 3, icon: '◌', title: 'Take a breathing break', detail: 'Reset and refocus your mind', info: 'Find a comfortable seat. Breathe in slowly for four counts, pause, then breathe out for four counts. Let your shoulders relax.', category: 'Mindfulness' as Category, duration: 5, points: 40, color: 'lavender' },
-  { id: 4, icon: '✦', title: 'Practice gratitude', detail: 'A small moment of positivity', info: 'Think of one specific thing you appreciate today. Write it down or share it with someone who helped make it happen.', category: 'Connection' as Category, duration: 3, points: 30, color: 'peach' },
-  { id: 5, icon: '⌁', title: 'Take a water break', detail: 'A simple healthy reset', info: 'Fill a glass or bottle with water, step away from your screen, and take a quiet moment to hydrate without distractions.', category: 'Nutrition' as Category, duration: 2, points: 25, color: 'aqua' },
-  { id: 6, icon: '☾', title: 'Evening screen break', detail: 'Make space for better rest', info: 'Put your phone and laptop away. Lower the lights, stretch gently, or prepare for tomorrow while your mind winds down.', category: 'Rest & Recovery' as Category, duration: 15, points: 60, color: 'rest' },
-  { id: 7, icon: '↗', title: 'Take the stairs', detail: 'Add movement to your routine', info: 'Choose the stairs instead of the elevator for one trip today. Move at a comfortable pace and notice your breathing.', category: 'Movement' as Category, duration: 5, points: 30, color: 'mint' },
-  { id: 8, icon: '◇', title: 'Desk stretch', detail: 'Release tension between classes', info: 'Stand up and gently stretch your neck, shoulders, back, and legs. Avoid bouncing and keep every movement comfortable.', category: 'Movement' as Category, duration: 7, points: 35, color: 'mint' },
-  { id: 9, icon: '◎', title: 'Mindful observation', detail: 'Notice what is around you', info: 'Choose one nearby object and study its color, shape, texture, and details. When your mind wanders, return your attention to it.', category: 'Mindfulness' as Category, duration: 5, points: 35, color: 'lavender' },
-  { id: 10, icon: '☁', title: 'Guided body scan', detail: 'Reconnect with your body', info: 'Sit comfortably and move your attention slowly from your feet to your head, noticing sensations without trying to change them.', category: 'Mindfulness' as Category, duration: 10, points: 55, color: 'lavender' },
-  { id: 11, icon: '♡', title: 'Check in with someone', detail: 'A small message can matter', info: 'Send a thoughtful message to a friend, classmate, or family member. Ask how they are doing and give them your full attention.', category: 'Connection' as Category, duration: 5, points: 40, color: 'blue' },
-  { id: 12, icon: '♢', title: 'Add fruit to a meal', detail: 'Make one nourishing choice', info: 'Choose a piece of fruit or a serving of berries with a meal or snack. Take a moment to enjoy it without rushing.', category: 'Nutrition' as Category, duration: 5, points: 30, color: 'aqua' },
-  { id: 13, icon: '○', title: 'Plan a balanced lunch', detail: 'Fuel the rest of your day', info: 'Plan a lunch with a source of protein, a grain or starch, and something colorful such as fruit or vegetables.', category: 'Nutrition' as Category, duration: 8, points: 45, color: 'aqua' },
-  { id: 14, icon: '☾', title: 'Quiet reset', detail: 'Pause without a screen', info: 'Find a calm place, silence notifications, and let yourself rest without studying, scrolling, or multitasking.', category: 'Rest & Recovery' as Category, duration: 10, points: 45, color: 'rest' },
-  { id: 15, icon: '⌁', title: 'Prepare for sleep', detail: 'Build a calmer bedtime', info: 'Dim the lights, set out what you need for tomorrow, and choose a consistent time to begin winding down tonight.', category: 'Rest & Recovery' as Category, duration: 12, points: 55, color: 'rest' },
-];
-
-const faculties = [
-  { rank: 1, name: 'College of Arts & Sciences', points: 14820, badge: 'CAS', color: '#2f7e74' },
-  { rank: 2, name: 'Questrom School of Business', points: 13740, badge: 'QST', color: '#bd7358' },
-  { rank: 3, name: 'College of Engineering', points: 12840, badge: 'ENG', color: '#7b68a8' },
-  { rank: 4, name: 'College of Communication', points: 11620, badge: 'COM', color: '#5878a9' },
-  { rank: 5, name: 'Sargent College of Health & Rehabilitation Sciences', points: 10450, badge: 'SAR', color: '#9a7d44' },
-  { rank: 6, name: 'Faculty of Computing & Data Sciences', points: 9780, badge: 'CDS', color: '#527d91' },
-  { rank: 7, name: 'College of Fine Arts', points: 9210, badge: 'CFA', color: '#a15e73' },
-  { rank: 8, name: 'Wheelock College of Education & Human Development', points: 8760, badge: 'WED', color: '#63875b' },
-  { rank: 9, name: 'Frederick S. Pardee School of Global Studies', points: 8190, badge: 'PAR', color: '#846d9d' },
-  { rank: 10, name: 'College of General Studies', points: 7640, badge: 'CGS', color: '#a06c4c' },
-  { rank: 11, name: 'School of Hospitality Administration', points: 6980, badge: 'SHA', color: '#477b78' },
-  { rank: 12, name: 'Arvind and Chandan Nandlal Kilachand Honors College', points: 6250, badge: 'KHC', color: '#756c62' },
-];
-
-export default function WellbeingApp() {
-  const [tab, setTab] = useState<Tab>('home');
-  const [completed, setCompleted] = useState<number[]>([3, 5]);
-  const [selectedChallenge, setSelectedChallenge] = useState<number | null>(null);
-  const totalPoints = 340 + completed.reduce((sum, id) => sum + (challenges.find((c) => c.id === id)?.points ?? 0), 0);
-
-  function toggleChallenge(id: number) {
-    setCompleted((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
-  }
-
-  return (
-    <main className="app-shell">
-      <div className="phone-frame">
-        <section className="screen" aria-live="polite">
-          {tab === 'home' && <Home totalPoints={totalPoints} completed={completed.length} onExplore={() => setTab('challenges')} />}
-          {tab === 'challenges' && (selectedChallenge ? <ChallengeDetail challenge={challenges.find((item) => item.id === selectedChallenge)!} completed={completed.includes(selectedChallenge)} onBack={() => setSelectedChallenge(null)} onComplete={() => { if (!completed.includes(selectedChallenge)) toggleChallenge(selectedChallenge); }} /> : <Challenges completed={completed} onOpen={setSelectedChallenge} />)}
-          {tab === 'ranking' && <Ranking />}
-          {tab === 'profile' && <Profile totalPoints={totalPoints} completed={completed} />}
-        </section>
-        <nav className="bottom-nav" aria-label="Main navigation">
-          <NavButton label="Home" icon="⌂" active={tab === 'home'} onClick={() => setTab('home')} />
-          <NavButton label="Challenges" icon="✓" active={tab === 'challenges'} onClick={() => setTab('challenges')} />
-          <NavButton label="Ranking" icon="▥" active={tab === 'ranking'} onClick={() => setTab('ranking')} />
-          <NavButton label="Profile" icon="○" active={tab === 'profile'} onClick={() => setTab('profile')} />
-        </nav>
-      </div>
-    </main>
-  );
+  return <main className="student-app">
+    <header className="student-header"><Logo/><div className="student-header-actions"><a href="/admin" className="admin-link">Admin preview</a><button className="avatar-button">DZ</button></div></header>
+    <div className="student-layout">
+      <nav className="student-nav" aria-label="Student navigation">{([['Home','home'],['My Challenges','target'],['Explore','compass'],['Leaderboards','trophy'],['Profile','user']] as const).map(([label, icon]) => <button key={label} className={tab === label ? 'active' : ''} onClick={() => { setTab(label); setSelectedCompetition(null); }}><Icon name={icon}/><span>{label}</span></button>)}</nav>
+      <section className="student-content">{selectedCompetition ? <CompetitionDetail competition={selectedCompetition} joined={joined.includes(selectedCompetition.id)} onJoin={() => joinCompetition(selectedCompetition.id)} onBack={() => setSelectedCompetition(null)} onActivity={setSelectedActivity} completed={completed}/> : <>
+        {tab === 'Home' && <StudentHome completed={completed.length} onNavigate={setTab} onCompetition={setSelectedCompetition}/>}
+        {tab === 'My Challenges' && <MyChallenges joined={joined} onCompetition={setSelectedCompetition}/>}
+        {tab === 'Explore' && <Explore joined={joined} onJoin={joinCompetition} onCompetition={setSelectedCompetition} onActivity={setSelectedActivity}/>}
+        {tab === 'Leaderboards' && <Leaderboards/>}{tab === 'Profile' && <StudentProfile completed={completed.length}/>}
+      </>}</section>
+    </div>
+    <nav className="mobile-nav" aria-label="Student navigation">{([['Home','home'],['My Challenges','target'],['Explore','compass'],['Leaderboards','trophy'],['Profile','user']] as const).map(([label, icon]) => <button key={label} className={tab === label ? 'active' : ''} onClick={() => { setTab(label); setSelectedCompetition(null); }}><Icon name={icon}/><small>{label === 'My Challenges' ? 'Challenges' : label}</small></button>)}</nav>
+    {selectedActivity && <ActivityModal activity={selectedActivity} done={completed.includes(selectedActivity.id)} onClose={() => setSelectedActivity(null)} onComplete={() => finishActivity(selectedActivity.id)}/>}
+  </main>;
 }
 
-function Header({ title }: { title: string }) {
-  return <header className="page-header"><h1>{title}</h1></header>;
-}
-
-function Home({ totalPoints, completed, onExplore }: { totalPoints: number; completed: number; onExplore: () => void }) {
-  return <div className="page home-page">
-    <div className="home-top"><div><h1>Hi, Dannar <span>👋</span></h1></div><button className="avatar mini" aria-label="Profile">DZ</button></div>
-    <div className="hero-card"><div className="hero-copy"><h2>Small steps.<br/>Stronger together.</h2><button onClick={onExplore}>View challenges <span>→</span></button></div><div className="hero-art" aria-hidden="true"><span className="sun"/><span className="hill hill-one"/><span className="hill hill-two"/><Image className="terrier-mascot" src="/terrier-mascot-v2.png" alt="" width={1213} height={1296} priority /></div></div>
-    <div className="section-title"><div><p className="eyebrow">YOUR PROGRESS</p><h2>Keep it going</h2></div><span className="week-label">Week 2 of 3</span></div>
-    <div className="progress-card"><div className="ring" style={{'--progress': `${Math.min(88, 32 + completed * 9)}%`} as React.CSSProperties}><div><strong>{completed}</strong><span>done</span></div></div><div className="progress-info"><strong>{totalPoints.toLocaleString()}</strong><span>points earned</span><div className="bar"><i style={{width: `${Math.min(100, totalPoints / 8)}%`}}/></div><small>{Math.max(0, 800-totalPoints)} points to your next badge</small></div></div>
-    <div className="section-title compact"><div><p className="eyebrow">COMING UP</p><h2>Wellbeing events</h2></div><button className="text-button">See all</button></div>
-    <article className="event-card"><div className="event-date"><strong>28</strong><span>SEP</span></div><div><span className="pill">IN PERSON</span><h3>Campus wellbeing walk</h3><p>12:30 PM · Main Library steps</p></div><button className="round-button" aria-label="View event">→</button></article>
+function StudentHome({ completed, onNavigate, onCompetition }: { completed: number; onNavigate: (tab: StudentTab) => void; onCompetition: (competition: Competition) => void }) {
+  return <div className="student-page"><div className="welcome-row"><div><span className="kicker">SUNDAY, OCTOBER 12</span><h1>Good morning, Dannar</h1><p>One small action can change the shape of your day.</p></div><div className="streak-pill"><span>🔥</span><strong>7 day</strong><small>streak</small></div></div>
+    <section className="student-hero"><div><span className="hero-label">YOUR WEEK</span><h2>Keep your momentum going.</h2><p>You’re 80 points away from your next achievement.</p><button onClick={() => onNavigate('Explore')}>Find an activity <Icon name="arrow" size={17}/></button></div><div className="hero-progress"><div className="progress-orbit"><strong>420</strong><span>points</span></div><Image src="/terrier-mascot-v2.png" alt="Friendly Boston Terrier mascot" width={1213} height={1296} priority/></div></section>
+    <SectionHeading eyebrow="ACTIVE NOW" title="Your competitions" action="View all" onAction={() => onNavigate('My Challenges')}/><div className="competition-grid">{competitions.filter((c) => c.joined).map((competition) => <CompetitionCard key={competition.id} competition={competition} onClick={() => onCompetition(competition)}/>)}</div>
+    <SectionHeading eyebrow="TODAY’S PICKS" title="Small actions, real impact" action="Explore all" onAction={() => onNavigate('Explore')}/><div className="quick-actions">{activities.slice(0,4).map((activity) => <article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><span>{activity.dimension}</span><h3>{activity.title}</h3><small><Icon name="clock" size={13}/> {activity.duration} min · +{activity.points} pts</small></div><button aria-label={`Open ${activity.title}`} onClick={() => onNavigate('Explore')}><Icon name="chevron" size={18}/></button></article>)}</div>
+    <div className="home-stats"><article><strong>{completed}</strong><span>Activities completed</span></article><article><strong>3</strong><span>Badges earned</span></article><article><strong>#12</strong><span>Campus rank</span></article></div>
   </div>;
 }
 
-function Challenges({ completed, onOpen }: { completed: number[]; onOpen: (id: number) => void }) {
-  const [filter, setFilter] = useState<Category | 'All'>('All');
-  const visibleChallenges = filter === 'All' ? challenges : challenges.filter((challenge) => challenge.category === filter);
-
-  return <div className="page"><Header title="Challenges" />
-    <div className="filter-row">{(['All', ...Object.keys(categoryStyles)] as (Category | 'All')[]).map((category) => <button key={category} className={`filter ${filter === category ? 'active' : ''}`} onClick={() => setFilter(category)}>{category}</button>)}</div>
-    <div className="challenge-summary"><div><strong>{completed.length}/{challenges.length}</strong><span>completed this week</span></div><div className="tiny-bar"><i style={{width: `${completed.length/challenges.length*100}%`}}/></div></div>
-    <div className="challenge-list">{visibleChallenges.map((challenge) => { const done = completed.includes(challenge.id); return <article className={`challenge-card ${done ? 'done' : ''}`} key={challenge.id}><div className={`challenge-icon ${challenge.color}`}><Image src={categoryLogoImages[challenge.category]} alt="" width={1254} height={1254} /></div><div className="challenge-copy"><span className="category-label" style={{color: categoryStyles[challenge.category].color}}>{challenge.category}</span><h3>{challenge.title}</h3><p>{challenge.detail}</p><div className="challenge-meta"><span>◷ {challenge.duration} min</span><span>+{challenge.points} pts</span></div></div><button className="open-challenge" aria-label={`Open ${challenge.title}`} onClick={() => onOpen(challenge.id)}>{done ? '✓' : '›'}</button></article>; })}</div>
-  </div>;
+function CompetitionCard({ competition, onClick }: { competition: Competition; onClick: () => void }) {
+  return <button className="competition-card" onClick={onClick} style={{ '--accent': competition.accent } as React.CSSProperties}><div className="competition-card-top"><span className="type-pill"><Icon name={competition.type === 'Group' ? 'users' : 'user'} size={14}/> {competition.type}</span><Icon name="chevron"/></div><h3>{competition.name}</h3><p>{competition.description}</p><div className="competition-meta"><span>{competition.date}</span><span>{competition.members.toLocaleString()} participants</span></div><div className="progress-line"><i style={{width:`${competition.progress}%`}}/></div><small>{competition.progress}% complete</small></button>;
 }
 
-function ChallengeDetail({ challenge, completed, onBack, onComplete }: { challenge: typeof challenges[number]; completed: boolean; onBack: () => void; onComplete: () => void }) {
-  const totalSeconds = challenge.duration * 60;
-  const [remaining, setRemaining] = useState(totalSeconds);
-  const [running, setRunning] = useState(false);
-  const finished = remaining === 0;
-
-  useEffect(() => {
-    if (!running || remaining <= 0) return;
-    const timer = window.setInterval(() => setRemaining((time) => Math.max(0, time - 1)), 1000);
-    return () => window.clearInterval(timer);
-  }, [running, remaining]);
-
-  useEffect(() => {
-    if (finished && running) {
-      setRunning(false);
-      onComplete();
-    }
-  }, [finished, running, onComplete]);
-
-  const minutes = Math.floor(remaining / 60).toString().padStart(2, '0');
-  const seconds = (remaining % 60).toString().padStart(2, '0');
-  const progress = ((totalSeconds - remaining) / totalSeconds) * 100;
-
-  return <div className="page challenge-detail-page">
-    <button className="back-button" onClick={onBack}>← <span>Challenges</span></button>
-    <div className={`detail-icon ${challenge.color}`}><Image src={categoryLogoImages[challenge.category]} alt="" width={1254} height={1254} /></div>
-    <h1>{challenge.title}</h1>
-    <div className="detail-tags"><span>{categoryStyles[challenge.category].icon} {challenge.category}</span><span>◷ {challenge.duration} minutes</span><span>✦ {challenge.points} points</span></div>
-    <p className="detail-description">{challenge.info}</p>
-    <section className={`timer-card ${running ? 'timer-running' : ''}`}>
-      <p>{finished ? 'Challenge complete!' : running ? 'Time remaining' : completed ? 'Completed' : 'Ready when you are'}</p>
-      <strong>{minutes}:{seconds}</strong>
-      <div className="timer-track"><i style={{width: `${progress}%`}} /></div>
-      {finished || completed ? <button className="primary-timer-button" onClick={onBack}>Back to challenges</button> : running ? <button className="quit-button" onClick={() => { setRunning(false); setRemaining(totalSeconds); }}>Quit challenge</button> : <button className="primary-timer-button" onClick={() => setRunning(true)}>Start challenge</button>}
-    </section>
-    <div className="timer-tip"><span>✓</span><p>Stay on this screen while the timer runs. Your points will be added when it reaches zero.</p></div>
-  </div>;
+function MyChallenges({ joined, onCompetition }: { joined: string[]; onCompetition: (competition: Competition) => void }) {
+  const current = competitions.filter((competition) => joined.includes(competition.id));
+  return <div className="student-page"><PageIntro eyebrow="YOUR SPACE" title="My challenges" text="Move between competitions and see exactly where you stand."/><div className="overview-strip"><div><span>Active competitions</span><strong>{current.length}</strong></div><div><span>Total points</span><strong>420</strong></div><div><span>Activities this week</span><strong>6</strong></div></div><SectionHeading title="In progress"/><div className="competition-list">{current.map((competition) => <CompetitionCard key={competition.id} competition={competition} onClick={() => onCompetition(competition)}/>)}</div><section className="invite-card"><div className="invite-icon"><Icon name="qr" size={26}/></div><div><h3>Have an invitation?</h3><p>Open a team link or scan a QR code to join instantly.</p></div><button>Enter code</button></section></div>;
 }
 
-function Ranking() {
-  return <div className="page ranking-page"><Header title="College ranking" /><div className="ranking-hero"><span>WEEK 2</span><strong>118,280</strong><p>community points earned</p><div className="sparkles">✦　·　✦</div></div><div className="ranking-label"><span>RANK</span><span>COLLEGE</span><span>POINTS</span></div><div className="ranking-list">{faculties.map((faculty) => <article key={faculty.rank} className={faculty.badge === 'ENG' ? 'your-faculty' : ''}><strong className="rank-number">{faculty.rank}</strong><span className="faculty-badge" style={{background: faculty.color}}>{faculty.badge}</span><div><h3>{faculty.name}</h3>{faculty.badge === 'ENG' && <p>Your college</p>}</div><strong className="faculty-points">{faculty.points.toLocaleString()}</strong></article>)}</div><p className="ranking-note">Rankings refresh every hour. Complete a challenge to help your college move up.</p></div>;
+function Explore({ joined, onJoin, onCompetition, onActivity }: { joined: string[]; onJoin: (id: string) => void; onCompetition: (competition: Competition) => void; onActivity: (activity: typeof activities[number]) => void }) {
+  const [dimension, setDimension] = useState<Dimension | 'All'>('All');
+  const filtered = dimension === 'All' ? activities : activities.filter((activity) => activity.dimension === dimension);
+  return <div className="student-page"><PageIntro eyebrow="DISCOVER" title="Explore well-being" text="Find a competition to join or choose one action for today."/><div className="join-banner"><div><span className="kicker">OPEN CHALLENGE</span><h2>Midterm Reset Week</h2><p>Seven days to pause, recharge, and reconnect.</p><span>Starts October 20 · 537 joined</span></div><button onClick={() => onJoin('reset')}>{joined.includes('reset') ? <><Icon name="check" size={17}/> Joined</> : 'Join challenge'}</button></div><SectionHeading title="Activity library" subtitle="Explore all seven dimensions"/><div className="dimension-filters"><button className={dimension === 'All' ? 'active' : ''} onClick={() => setDimension('All')}>All</button>{(Object.keys(dimensionMeta) as Dimension[]).map((item) => <button className={dimension === item ? 'active' : ''} key={item} onClick={() => setDimension(item)}><DimensionIcon dimension={item} size="sm"/>{item}</button>)}</div><div className="activity-grid">{filtered.map((activity) => <button key={activity.id} className="activity-card" onClick={() => onActivity(activity)}><DimensionIcon dimension={activity.dimension} size="lg"/><span style={{color:dimensionMeta[activity.dimension].color}}>{activity.dimension}</span><h3>{activity.title}</h3><p>{activity.detail}</p><footer><span><Icon name="clock" size={14}/>{activity.duration} min</span><strong>+{activity.points} pts</strong></footer></button>)}</div><div className="browse-competitions"><SectionHeading title="More competitions"/>{competitions.map((competition) => <button key={competition.id} onClick={() => onCompetition(competition)}><span style={{background:competition.accent}}><Icon name={competition.type === 'Group' ? 'users' : 'user'}/></span><div><h3>{competition.name}</h3><p>{competition.type} · {competition.date}</p></div><Icon name="chevron"/></button>)}</div></div>;
 }
 
-function Profile({ totalPoints, completed }: { totalPoints: number; completed: number[] }) {
-  const categoryCounts = challenges.reduce((counts, challenge) => {
-    if (completed.includes(challenge.id)) counts[challenge.category] += 1;
-    return counts;
-  }, { Movement: 0, Mindfulness: 0, Connection: 0, Nutrition: 0, 'Rest & Recovery': 0 } as Record<Category, number>);
-  const earned = Object.values(categoryCounts).reduce((sum, count) => sum + badgeLevels.filter((level) => count >= level.required).length, 0);
-
-  return <div className="page profile-page"><Header title="Profile" /><section className="profile-card"><div className="avatar">DZ</div><h2>Dannar Zharkyn</h2><p>College of Engineering</p><span>Challenge participant</span></section><div className="stats-grid"><article><span>✦</span><strong>{totalPoints.toLocaleString()}</strong><p>Total points</p></article><article><span>✓</span><strong>{completed.length}</strong><p>Completed</p></article><article><span>↗</span><strong>7</strong><p>Day streak</p></article></div><section className="achievement-section"><div className="section-title compact"><div><h2>Badge collection</h2></div><span>{earned} of 15 earned</span></div><p className="badge-intro">Complete challenges in each category to unlock all three badge levels.</p><div className="badge-catalog">{(Object.keys(badgeNames) as Category[]).map((category) => <section className="badge-category" key={category}><div className="badge-category-title"><i><Image src={categoryLogoImages[category]} alt="" width={1254} height={1254} /></i><div><h3>{category}</h3><p>{categoryCounts[category]} completed</p></div></div><div className="badge-levels">{badgeLevels.map((level, index) => { const unlocked = categoryCounts[category] >= level.required; const progress = Math.min(100, categoryCounts[category] / level.required * 100); return <article className={unlocked ? 'badge-earned' : 'badge-locked'} key={level.label}><div className="badge-medallion"><Image src={badgeImages[category]} alt="" width={1254} height={1254} /><span className="badge-stars" aria-label={`Level ${index + 1}`}>{'★'.repeat(index + 1)}</span></div><div><strong>{badgeNames[category][index]}</strong><span>{unlocked ? 'Earned' : `${categoryCounts[category]}/${level.required} challenges`}</span><div className="badge-progress"><i style={{width: `${progress}%`, background: categoryStyles[category].color}} /></div></div></article>; })}</div></section>)}</div></section></div>;
+function CompetitionDetail({ competition, joined, onJoin, onBack, onActivity, completed }: { competition: Competition; joined: boolean; onJoin: () => void; onBack: () => void; onActivity: (activity: typeof activities[number]) => void; completed: number[] }) {
+  return <div className="student-page competition-detail"><button className="back-link" onClick={onBack}>← Back</button><section className="competition-detail-hero" style={{'--accent':competition.accent} as React.CSSProperties}><span className="type-pill">{competition.type} competition</span><h1>{competition.name}</h1><p>{competition.description}</p><div><span>{competition.date}</span><span>{competition.members.toLocaleString()} participants</span></div>{!joined && <button onClick={onJoin}>Join competition</button>}</section><div className="detail-stat-row"><article><span>Your points</span><strong>{joined?'420':'—'}</strong></article><article><span>Your rank</span><strong>{joined?'#12':'—'}</strong></article><article><span>Completed</span><strong>{joined?`${completed.length}/14`:'—'}</strong></article></div><SectionHeading title="Activities" subtitle="Complete these to earn competition points"/><div className="quick-actions">{activities.slice(0,6).map((activity) => <article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><span>{activity.dimension}</span><h3>{activity.title}</h3><small>{completed.includes(activity.id)?'Completed':`${activity.duration} min · +${activity.points} pts`}</small></div><button onClick={() => onActivity(activity)}>{completed.includes(activity.id)?<Icon name="check"/>:<Icon name="chevron"/>}</button></article>)}</div></div>;
 }
 
-function NavButton({ label, icon, active, onClick }: { label: string; icon: string; active: boolean; onClick: () => void }) {
-  return <button className={active ? 'active' : ''} onClick={onClick}><span>{icon}</span><small>{label}</small></button>;
+function Leaderboards() {
+  const [board, setBoard] = useState<'Team'|'Individual'>('Team'); const rows = board === 'Team' ? teamLeaderboard : studentLeaderboard;
+  return <div className="student-page"><PageIntro eyebrow="COMPETITION" title="Leaderboards" text="See how your community is moving together."/><label className="select-label">Competition<select><option>Engineering Floor Cup</option><option>Fall Well-Being Challenge</option></select></label><div className="segmented"><button className={board==='Team'?'active':''} onClick={() => setBoard('Team')}>Teams</button><button className={board==='Individual'?'active':''} onClick={() => setBoard('Individual')}>Individuals</button></div><section className="leader-podium"><div><span>2</span><div className="podium-avatar">{rows[1].name.slice(0,2)}</div><strong>{rows[1].name}</strong><small>{rows[1].points.toLocaleString()} pts</small></div><div className="first"><span>1</span><div className="podium-avatar">{rows[0].name.slice(0,2)}</div><strong>{rows[0].name}</strong><small>{rows[0].points.toLocaleString()} pts</small></div><div><span>3</span><div className="podium-avatar">{rows[2].name.slice(0,2)}</div><strong>{rows[2].name}</strong><small>{rows[2].points.toLocaleString()} pts</small></div></section><div className="leader-table">{rows.map((row,index) => <article key={row.name} className={row.name.includes('Dannar')||row.name==='Kilachand 4'?'you':''}><strong>{index+1}</strong><span className="row-avatar">{row.name.slice(0,2)}</span><div><h3>{row.name}</h3><p>{row.detail}</p></div><b>{row.points.toLocaleString()}</b></article>)}</div></div>;
 }
+
+function StudentProfile({ completed }: { completed: number }) {
+  const scores=[70,55,80,30,45,60,75];
+  return <div className="student-page"><PageIntro eyebrow="YOUR PROFILE" title="Progress & achievements" text="Celebrate the habits you are building across every dimension."/><section className="profile-summary"><div className="profile-avatar">DZ</div><div><h2>Dannar Zharkyn</h2><p>College of Engineering · Class of 2027</p></div><button>Edit profile</button></section><div className="profile-stats"><article><Icon name="spark"/><strong>420</strong><span>Total points</span></article><article><Icon name="check"/><strong>{completed}</strong><span>Completed</span></article><article><Icon name="target"/><strong>3</strong><span>Badges</span></article><article><span className="emoji-icon">🔥</span><strong>7</strong><span>Day streak</span></article></div><SectionHeading title="Your seven dimensions" subtitle="A balanced view of your recent activity"/><div className="dimension-progress">{(Object.keys(dimensionMeta) as Dimension[]).map((dimension,index) => <article key={dimension}><DimensionIcon dimension={dimension}/><div><span>{dimension}</span><div><i style={{width:`${scores[index]}%`,background:dimensionMeta[dimension].color}}/></div></div><strong>{scores[index]}%</strong></article>)}</div><SectionHeading title="Recent badges" action="See all"/><div className="badge-row">{['First Step','Good Neighbor','Mindful Moment'].map((badge,index) => <article key={badge}><span><Icon name={['move','people','heart'][index]} size={28}/></span><strong>{badge}</strong><small>Earned this month</small></article>)}</div></div>;
+}
+
+function ActivityModal({ activity, done, onClose, onComplete }: { activity: typeof activities[number]; done: boolean; onClose: () => void; onComplete: () => void }) {
+  const [started,setStarted]=useState(false);
+  return <div className="modal-backdrop" onMouseDown={onClose}><section className="activity-modal" onMouseDown={(event)=>event.stopPropagation()}><button className="modal-close" onClick={onClose}><Icon name="close"/></button><DimensionIcon dimension={activity.dimension} size="lg"/><span className="modal-dimension" style={{color:dimensionMeta[activity.dimension].color}}>{activity.dimension}</span><h2>{activity.title}</h2><p>{activity.detail} Take this moment at your own pace—there is no need to be perfect.</p><div className="modal-meta"><span><Icon name="clock"/> {activity.duration} minutes</span><span><Icon name="spark"/> {activity.points} points</span></div>{started?<div className="timer-demo"><span>Time remaining</span><strong>{String(activity.duration).padStart(2,'0')}:00</strong><div><i/></div><button onClick={()=>setStarted(false)}>Quit activity</button></div>:<button className="primary-button" disabled={done} onClick={()=>{onComplete();setStarted(true);}}>{done?'Completed':'Start activity'}</button>}</section></div>;
+}
+
+function PageIntro({eyebrow,title,text}:{eyebrow:string;title:string;text:string}) { return <header className="page-intro"><span className="kicker">{eyebrow}</span><h1>{title}</h1><p>{text}</p></header>; }
+function SectionHeading({eyebrow,title,subtitle,action,onAction}:{eyebrow?:string;title:string;subtitle?:string;action?:string;onAction?:()=>void}) { return <div className="section-heading"><div>{eyebrow&&<span className="kicker">{eyebrow}</span>}<h2>{title}</h2>{subtitle&&<p>{subtitle}</p>}</div>{action&&<button onClick={onAction}>{action}</button>}</div>; }
