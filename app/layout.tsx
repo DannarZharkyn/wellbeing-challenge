@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import './admin-parity.css';
+import './ux-cleanup.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(

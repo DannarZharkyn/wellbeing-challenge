@@ -1,0 +1,95 @@
+/* A single, readable application typeface keeps the student and administrator experiences consistent. */
+body,
+body * {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.admin-sidebar > .brand { margin-bottom: 18px; }
+.welcome-row.simple { min-height: 88px; align-items: center; margin-bottom: 18px; padding: 8px 4px; }
+.welcome-row.simple h1 { font-size: 32px; font-weight: 800; }
+.welcome-row.simple img { width: 84px; height: 90px; object-fit: contain; object-position: center; filter: drop-shadow(0 6px 8px #173c3230); }
+
+.student-team { overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: #fff; }
+.student-team > header { display: flex; align-items: center; justify-content: space-between; padding: 17px; border-bottom: 1px solid var(--line); background: #f7f8f5; }
+.student-team > header > div { display: flex; align-items: center; gap: 11px; }
+.student-team header span strong,
+.student-team header span small { display: block; }
+.student-team header span strong { font-size: 14px; }
+.student-team header span small { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.student-team > header > b { font-size: 14px; }
+.student-team > article { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 12px; padding: 13px 17px; border-bottom: 1px solid var(--line); }
+.student-team > article.you { background: #fff8e8; }
+.student-team > article > span { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: #e8ece8; color: var(--green); font-size: 12px; font-weight: 800; }
+.student-team > article > strong { font-size: 14px; }
+.student-team > article > strong small { display: inline-block; margin-left: 7px; padding: 3px 6px; border-radius: 999px; background: #e3eee9; color: var(--green); font-size: 10px; }
+.student-team > article > b { font-size: 14px; }
+.student-team > footer { padding: 13px 17px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+.ranking-picker { display: grid; gap: 8px; margin-bottom: 18px; }
+.ranking-picker > span { color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.ranking-picker > button { display: grid; grid-template-columns: 24px 1fr 20px; align-items: center; gap: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: #66736f; text-align: left; }
+.ranking-picker > button > strong { font-size: 14px; }
+.ranking-picker > button > .icon:last-child { opacity: 0; }
+.ranking-picker > button.active { border-color: #94b5a9; background: #edf4f0; color: var(--green); }
+.ranking-picker > button.active > .icon:last-child { opacity: 1; }
+
+.quick-actions article > div:nth-child(2) > span,
+.home-stats span,
+.overview-strip span,
+.dimension-progress article > div:nth-child(2) > span { font-size: 12px; }
+.quick-actions h3,
+.competition-card h3,
+.activity-card h3 { font-size: 15px; }
+.quick-actions small,
+.competition-card p,
+.activity-card p { font-size: 12px; }
+.home-stats strong,
+.overview-strip strong { font-size: 22px; }
+.page-intro h1,
+.section-heading h2,
+.competition-detail-hero h1 { font-weight: 800; }
+.leader-table h3 { font-size: 14px; }
+.leader-table p { font-size: 12px; }
+.leader-table b { font-size: 13px; }
+.leader-podium strong { font-size: 12px; }
+.leader-podium small { font-size: 11px; }
+.profile-stats span:last-child,
+.badge-row small { font-size: 11px; }
+
+.admin-participant-workspace { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 20px; }
+.participant-directory,
+.participant-detail { overflow: hidden; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; }
+.participant-directory > header { display: flex; align-items: center; justify-content: space-between; padding: 17px; background: #f9fafb; }
+.participant-directory > header strong { font-size: 15px; }
+.participant-directory > header span { color: #6b7280; font-size: 12px; }
+.participant-directory > button { width: 100%; display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 11px; padding: 13px 16px; border: 0; border-top: 1px solid #e5e7eb; background: #fff; text-align: left; }
+.participant-directory > button.active { background: #fff1f2; }
+.participant-directory > button > span,
+.participant-detail > header > span { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 800; }
+.participant-directory > button div strong,
+.participant-directory > button div small { display: block; }
+.participant-directory > button div strong { font-size: 14px; }
+.participant-directory > button div small { margin-top: 4px; color: #6b7280; font-size: 12px; }
+.participant-directory > button > b { font-size: 13px; }
+.participant-detail > header { display: flex; align-items: center; gap: 13px; padding: 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; }
+.participant-detail h3 { margin: 0; font-size: 20px; }
+.participant-detail header p { margin: 4px 0 0; color: #6b7280; }
+.participant-activity-summary { display: flex; align-items: baseline; gap: 8px; padding: 18px 20px; }
+.participant-activity-summary strong { font-size: 28px; }
+.participant-activity-summary span { color: #6b7280; font-size: 13px; }
+.participant-completions { padding: 0 20px 20px; }
+.participant-completions article { display: grid; grid-template-columns: 44px 1fr auto auto; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid #e5e7eb; }
+.participant-completions h4 { margin: 0; font-size: 14px; }
+.participant-completions p { margin: 4px 0 0; color: #6b7280; font-size: 12px; }
+.participant-completions b { font-size: 13px; }
+.participant-completions > article > span { padding: 5px 8px; border-radius: 999px; background: #dcfce7; color: #166534; font-size: 11px; font-weight: 700; }
+
+@media (max-width: 900px) {
+  .admin-participant-workspace { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 650px) {
+  .participant-completions article { grid-template-columns: 44px 1fr auto; }
+  .participant-completions > article > span { grid-column: 2 / 4; width: max-content; }
+  .welcome-row.simple h1 { font-size: 27px; }
+}
