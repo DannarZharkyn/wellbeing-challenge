@@ -49,13 +49,13 @@ export const activities = [
 
 export const competitions: Competition[] = [
   { id: 'fall', name: 'Fall Well-Being Challenge', type: 'Individual', description: 'Build small habits across all seven dimensions.', date: 'Oct 1 – Nov 15', members: 1248, progress: 62, accent: '#a6192e', joined: true },
-  { id: 'eng', name: 'Engineering Floor Cup', type: 'Group', description: 'Earn points with your floor and climb the team table.', date: 'Oct 7 – Oct 28', members: 186, progress: 41, accent: '#2f6f62', joined: true, teams: ['Kilachand 4', 'Myles 3', 'Warren A8', 'Danielsen 2'] },
+  { id: 'eng', name: 'Engineering Floor Cup', type: 'Group', description: 'Earn points with your floor and climb the team table.', date: 'Oct 7 – Oct 28', members: 186, progress: 41, accent: '#2f6f62', joined: true, teams: ['Towers 4th Floor', 'Myles 3rd Floor', 'Warren A8', 'Danielsen 2'] },
   { id: 'reset', name: 'Midterm Reset Week', type: 'Individual', description: 'A focused week of rest, connection, and movement.', date: 'Oct 20 – Oct 27', members: 537, progress: 0, accent: '#6658a4', joined: false },
 ];
 
 export const teamLeaderboard = [
-  { name: 'Kilachand 4', detail: '58 members', points: 12840 },
-  { name: 'Myles 3', detail: '46 members', points: 11620 },
+  { name: 'Towers 4th Floor', detail: '58 members', points: 12840 },
+  { name: 'Myles 3rd Floor', detail: '46 members', points: 11620 },
   { name: 'Warren A8', detail: '51 members', points: 10980 },
   { name: 'Danielsen 2', detail: '31 members', points: 9240 },
 ];
@@ -72,5 +72,5 @@ export const adminCompetitions = [
   { name: 'Fall Well-Being Challenge', type: 'Individual', status: 'Active', participants: 48, activities: 18, dates: 'Oct 1 – Nov 15' },
   { name: 'Engineering Floor Cup', type: 'Group', status: 'Active', participants: 52, activities: 12, dates: 'Oct 7 – Oct 28' },
   { name: 'Midterm Reset Week', type: 'Individual', status: 'Scheduled', participants: 36, activities: 8, dates: 'Oct 20 – Oct 27' },
-  { name: 'Law Sections Challenge', type: 'Group', status: 'Draft', participants: 0, activities: 10, dates: 'Nov 3 – Nov 21' },
+  { name: 'Law Sections Challenge', type: 'Group', status: 'Scheduled', participants: 0, activities: 10, dates: 'Nov 3 – Nov 21' },
 ];
