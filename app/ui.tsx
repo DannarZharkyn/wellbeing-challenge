@@ -28,6 +28,7 @@ export function Icon({ name, size = 20 }: { name: string; size?: number }) {
     link: <><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1"/></>,
     close: <><path d="m6 6 12 12M18 6 6 18"/></>,
     search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
+    edit: <><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></>,
     trash: <><path d="M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"/></>,
     chevron: <path d="m9 18 6-6-6-6"/>,
     arrow: <path d="M5 12h14M13 6l6 6-6 6"/>,
