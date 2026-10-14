@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { activities, adminCompetitions, dimensionMeta, teamLeaderboard, type Dimension } from '../prototype-data';
 import { DimensionIcon, Icon, Logo } from '../ui';
+import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 
 type AdminView = 'Overview' | 'Competitions' | 'Activity Library' | 'Templates';
 type AdminCompetition = typeof adminCompetitions[number];
@@ -132,9 +133,52 @@ function CompetitionParticipants({grouped}:{grouped:boolean}) {
 function AssignedActivities({notify}:{notify:(m:string)=>void}) { return <><div className="subpage-heading"><div><h2>Assigned activities</h2><p>12 activities are available in this competition.</p></div><button className="primary-button" onClick={()=>notify('Activity picker opened')}><Icon name="plus"/> Assign activities</button></div><section className="panel no-pad"><div className="activity-admin-table">{activities.slice(0,8).map(activity=><article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><h3>{activity.title}</h3><p>{activity.dimension} · {activity.type}{activity.type==='Timed'?` · ${activity.duration} minutes`:''}</p></div><strong>{activity.points} pts</strong><button>•••</button></article>)}</div></section></>; }
 function AdminLeaderboard(){return <section className="panel"><PanelHeading title="Live team leaderboard" action="Export"/><div className="admin-leaderboard">{teamLeaderboard.map((team,index)=><article key={team.name}><strong>{index+1}</strong><span>{team.name.slice(0,2)}</span><div><h3>{team.name}</h3><p>{team.detail}</p></div><b>{team.points.toLocaleString()} pts</b></article>)}</div></section>;}
 
+type LibraryActivity = { id:string; title:string; detail:string; dimension:Dimension; type:'Timed'|'Daily check-in'; duration:number; points:number };
+
 function ActivityLibrary({notify}:{notify:(m:string)=>void}) {
-  const [dimension,setDimension]=useState<Dimension|'All'>('All'); const shown=dimension==='All'?activities:activities.filter(a=>a.dimension===dimension);
-  return <><AdminHeading eyebrow="CONTENT" title="Activity library" text="Manage reusable activities across every competition." action="Create activity" onAction={()=>notify('New activity form opened')}/><div className="library-layout"><aside className="library-filters"><strong>Dimensions</strong><button className={dimension==='All'?'active':''} onClick={()=>setDimension('All')}>All activities <span>{activities.length}</span></button>{(Object.keys(dimensionMeta) as Dimension[]).map(item=><button className={dimension===item?'active':''} key={item} onClick={()=>setDimension(item)}><DimensionIcon dimension={item} size="sm"/>{item}<span>{activities.filter(a=>a.dimension===item).length}</span></button>)}</aside><section className="panel no-pad"><div className="library-top"><label className="admin-search"><Icon name="search" size={17}/><input placeholder="Search activities"/></label><button>Timed & check-in</button></div><div className="activity-admin-table">{shown.map(activity=><article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><h3>{activity.title}</h3><p>{activity.dimension} · {activity.type}{activity.type==='Timed'?` · ${activity.duration} minutes`:''}</p></div><strong>{activity.points} pts</strong><button>•••</button></article>)}</div></section></div></>;
+  const fallback:LibraryActivity[]=activities.map(activity=>({...activity,id:String(activity.id)}));
+  const supabase=getSupabaseBrowserClient();
+  const [items,setItems]=useState<LibraryActivity[]>(fallback);
+  const [dimension,setDimension]=useState<Dimension|'All'>('All');
+  const [search,setSearch]=useState('');
+  const [createOpen,setCreateOpen]=useState(false);
+  const [loading,setLoading]=useState(Boolean(supabase));
+  const [loadError,setLoadError]=useState('');
+
+  /* DESIGN DECISION: The central activity library is the source of truth; competitions will reference activity IDs rather than copying activity content. */
+  /* PROTOTYPE: If Supabase environment variables are unavailable, the page falls back to the original in-memory activities so design review is never blocked. */
+  /* TODO(PRODUCTION): Require authenticated administrator authorization before database writes and replace the temporary anonymous write policies. */
+  useEffect(()=>{
+    if(!supabase)return;
+    supabase.from('activities').select('id,title,description,dimension,completion_type,duration_minutes,points').eq('is_active',true).order('created_at').then(({data,error})=>{
+      if(error){setLoadError(error.message);setLoading(false);return;}
+      setItems((data??[]).map(row=>({id:row.id,title:row.title,detail:row.description,dimension:row.dimension as Dimension,type:row.completion_type==='timed'?'Timed':'Daily check-in',duration:row.duration_minutes??0,points:row.points})));
+      setLoading(false);
+    });
+  },[supabase]);
+
+  const shown=items.filter(activity=>(dimension==='All'||activity.dimension===dimension)&&activity.title.toLowerCase().includes(search.trim().toLowerCase()));
+  async function createActivity(input:Omit<LibraryActivity,'id'>){
+    const client=getSupabaseBrowserClient();
+    if(!client){setItems(current=>[...current,{...input,id:`local-${Date.now()}`}]);setCreateOpen(false);notify('Activity added locally');return;}
+    const {data,error}=await client.from('activities').insert({title:input.title,description:input.detail,dimension:input.dimension,completion_type:input.type==='Timed'?'timed':'daily_check_in',duration_minutes:input.type==='Timed'?input.duration:null,points:input.points}).select('id,title,description,dimension,completion_type,duration_minutes,points').single();
+    if(error){notify(`Could not create activity: ${error.message}`);return;}
+    setItems(current=>[...current,{id:data.id,title:data.title,detail:data.description,dimension:data.dimension as Dimension,type:data.completion_type==='timed'?'Timed':'Daily check-in',duration:data.duration_minutes??0,points:data.points}]);
+    setCreateOpen(false);notify('Activity created');
+  }
+  async function archiveActivity(activity:LibraryActivity){
+    if(!window.confirm(`Remove “${activity.title}” from the activity library?`))return;
+    const client=getSupabaseBrowserClient();
+    if(client&&!activity.id.startsWith('local-')){const {error}=await client.from('activities').update({is_active:false,updated_at:new Date().toISOString()}).eq('id',activity.id);if(error){notify(`Could not remove activity: ${error.message}`);return;}}
+    setItems(current=>current.filter(item=>item.id!==activity.id));notify('Activity removed');
+  }
+  return <><AdminHeading eyebrow="CONTENT" title="Activity library" text="Manage reusable activities across every competition." action="Create activity" onAction={()=>setCreateOpen(true)}/>{loadError&&<div className="library-error">Database unavailable: showing the local prototype library.</div>}<div className="library-layout"><aside className="library-filters"><strong>Dimensions</strong><button className={dimension==='All'?'active':''} onClick={()=>setDimension('All')}>All activities <span>{items.length}</span></button>{(Object.keys(dimensionMeta) as Dimension[]).map(item=><button className={dimension===item?'active':''} key={item} onClick={()=>setDimension(item)}><DimensionIcon dimension={item} size="sm"/>{item}<span>{items.filter(activity=>activity.dimension===item).length}</span></button>)}</aside><section className="panel no-pad"><div className="library-top"><label className="admin-search"><Icon name="search" size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="Search activities"/></label><button>Timed & check-in</button></div><div className="activity-admin-table">{loading?<div className="library-empty">Loading activities…</div>:shown.length?shown.map(activity=><article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><h3>{activity.title}</h3><p>{activity.dimension} · {activity.type}{activity.type==='Timed'?` · ${activity.duration} minutes`:''}</p></div><strong>{activity.points} pts</strong><button className="activity-delete" aria-label={`Delete ${activity.title}`} onClick={()=>archiveActivity(activity)}><Icon name="trash" size={18}/></button></article>):<div className="library-empty">No activities found.</div>}</div></section></div>{createOpen&&<CreateActivityModal onClose={()=>setCreateOpen(false)} onCreate={createActivity}/>}</>;
+}
+
+function CreateActivityModal({onClose,onCreate}:{onClose:()=>void;onCreate:(activity:Omit<LibraryActivity,'id'>)=>void}){
+  const [title,setTitle]=useState(''); const [detail,setDetail]=useState(''); const [dimension,setDimension]=useState<Dimension>('Environmental'); const [type,setType]=useState<'Timed'|'Daily check-in'>('Daily check-in'); const [points,setPoints]=useState(30); const [duration,setDuration]=useState(10);
+  const valid=title.trim().length>=2&&points>0&&(type==='Daily check-in'||duration>0);
+  return <div className="modal-backdrop admin-modal-wrap" onMouseDown={onClose}><section className="create-modal activity-create-modal" onMouseDown={event=>event.stopPropagation()}><header><div><span>ACTIVITY LIBRARY</span><h2>Create activity</h2><p>Add a reusable activity to the central library.</p></div><button onClick={onClose}><Icon name="close"/></button></header><div className="form-body"><label>Activity title<input value={title} onChange={event=>setTitle(event.target.value)} placeholder="e.g. Take a mindful campus walk"/></label><label>Description<textarea value={detail} onChange={event=>setDetail(event.target.value)} placeholder="What should the student do?"/></label><label>Well-being dimension<select value={dimension} onChange={event=>setDimension(event.target.value as Dimension)}>{(Object.keys(dimensionMeta) as Dimension[]).map(item=><option key={item}>{item}</option>)}</select></label><div className="activity-form-row"><label>Completion type<select value={type} onChange={event=>setType(event.target.value as 'Timed'|'Daily check-in')}><option>Daily check-in</option><option>Timed</option></select></label>{type==='Timed'&&<label>Duration (minutes)<input type="number" min="1" value={duration} onChange={event=>setDuration(Number(event.target.value))}/></label>}<label>Points<input type="number" min="1" value={points} onChange={event=>setPoints(Number(event.target.value))}/></label></div></div><footer><button className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={!valid} onClick={()=>onCreate({title:title.trim(),detail:detail.trim(),dimension,type,duration:type==='Timed'?duration:0,points})}>Create Activity</button></footer></section></div>;
 }
 
 /* DESIGN DECISION: Creation has only Basics and Activities. Team setup happens after creation, so organizers always manage memberships and invite links in the competition context. */
