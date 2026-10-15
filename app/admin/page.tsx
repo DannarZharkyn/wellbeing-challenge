@@ -10,13 +10,23 @@ type AdminView = 'Overview' | 'Competitions' | 'Activity Library' | 'Templates';
 type AdminCompetition = typeof adminCompetitions[number];
 
 export default function AdminDashboard() {
+  const supabase=getSupabaseBrowserClient();
+  const [authStatus,setAuthStatus]=useState<'loading'|'signed-out'|'signed-in'>(supabase?'loading':'signed-out');
   const [view, setView] = useState<AdminView>('Overview');
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<AdminCompetition | null>(null);
   const [toast, setToast] = useState('');
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400); };
+  useEffect(()=>{
+    if(!supabase)return;
+    supabase.auth.getSession().then(({data})=>setAuthStatus(data.session?'signed-in':'signed-out'));
+    const {data}=supabase.auth.onAuthStateChange((_event,session)=>setAuthStatus(session?'signed-in':'signed-out'));
+    return ()=>data.subscription.unsubscribe();
+  },[supabase]);
+  if(authStatus==='loading')return <AdminAuthShell><p className="admin-auth-status">Checking administrator access…</p></AdminAuthShell>;
+  if(authStatus==='signed-out')return <AdminLogin/>;
   return <main className="admin-app">
-    <aside className="admin-sidebar"><Logo/><nav>{([['Overview','grid'],['Competitions','trophy'],['Activity Library','target'],['Templates','book']] as const).map(([label,icon]) => <button key={label} className={view===label?'active':''} onClick={() => {setView(label);setSelected(null);}}><Icon name={icon}/>{label}</button>)}</nav><div className="admin-sidebar-footer"><Link href="/">← Student experience</Link><div><span>PF</span><p><strong>Pedro Falci</strong><small>Administrator</small></p></div></div></aside>
+    <aside className="admin-sidebar"><Logo/><nav>{([['Overview','grid'],['Competitions','trophy'],['Activity Library','target'],['Templates','book']] as const).map(([label,icon]) => <button key={label} className={view===label?'active':''} onClick={() => {setView(label);setSelected(null);}}><Icon name={icon}/>{label}</button>)}</nav><div className="admin-sidebar-footer"><Link href="/">← Student experience</Link><div><span>PF</span><p><strong>Pedro Falci</strong><small>Administrator</small></p></div><button className="admin-sign-out" onClick={()=>supabase?.auth.signOut()}>Sign out</button></div></aside>
     <section className="admin-main"><header className="admin-topbar"><div><span>Student Wellbeing workspace</span><strong>{selected?.name ?? view}</strong></div><div><button className="icon-button"><Icon name="search"/></button><button className="avatar-button">PF</button></div></header>
       <div className="admin-content">{selected ? <AdminCompetitionDetail competition={selected} onBack={() => setSelected(null)} notify={notify}/> : <>
         {view==='Overview'&&<Overview onCreate={()=>setCreateOpen(true)} onOpen={setSelected}/>} 
@@ -28,6 +38,14 @@ export default function AdminDashboard() {
     {createOpen&&<CreateCompetition onClose={()=>setCreateOpen(false)} onCreated={(type)=>{setCreateOpen(false);setSelected({name:'New Well-Being Competition',type,status:'Scheduled',participants:0,activities:activities.length,dates:'Dates not set'});notify('Competition created');}}/>}
     {toast&&<div className="toast"><Icon name="check"/>{toast}</div>}
   </main>;
+}
+
+function AdminAuthShell({children}:{children:React.ReactNode}){return <main className="admin-auth-page"><section className="admin-auth-card"><Logo/>{children}<Link href="/">← Return to student experience</Link></section></main>}
+
+function AdminLogin(){
+  const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [error,setError]=useState(''); const [submitting,setSubmitting]=useState(false);
+  async function submit(event:React.FormEvent){event.preventDefault();const client=getSupabaseBrowserClient();if(!client){setError('Supabase is not configured.');return;}setSubmitting(true);setError('');const {error:loginError}=await client.auth.signInWithPassword({email,password});if(loginError){setError('Email or password is incorrect.');setSubmitting(false);}}
+  return <AdminAuthShell><div className="admin-auth-heading"><span>ADMINISTRATOR ACCESS</span><h1>Sign in</h1><p>Use your approved Student Wellbeing administrator account.</p></div><form className="admin-login-form" onSubmit={submit}><label>Email address<input type="email" value={email} onChange={event=>setEmail(event.target.value)} autoComplete="username" required/></label><label>Password<input type="password" value={password} onChange={event=>setPassword(event.target.value)} autoComplete="current-password" required/></label>{error&&<p className="admin-login-error">{error}</p>}<button className="primary-button" disabled={submitting}>{submitting?'Signing in…':'Sign in'}</button></form></AdminAuthShell>
 }
 
 function Overview({onCreate,onOpen}:{onCreate:()=>void;onOpen:(item:AdminCompetition)=>void}) {
@@ -180,7 +198,7 @@ function ActivityLibrary({notify}:{notify:(m:string)=>void}) {
   async function archiveActivity(activity:LibraryActivity){
     if(!window.confirm(`Remove “${activity.title}” from the activity library?`))return;
     const client=getSupabaseBrowserClient();
-    if(client&&!activity.id.startsWith('local-')){const {error}=await client.from('activities').update({is_active:false,updated_at:new Date().toISOString()}).eq('id',activity.id);if(error){notify(`Could not remove activity: ${error.message}`);return;}}
+    if(client&&!activity.id.startsWith('local-')){const {error}=await client.rpc('archive_activity',{activity_id:activity.id});if(error){notify(`Could not remove activity: ${error.message}`);return;}}
     setItems(current=>current.filter(item=>item.id!==activity.id));notify('Activity removed');
   }
   return <><AdminHeading eyebrow="CONTENT" title="Activity library" text="Manage reusable activities across every competition." action="Create activity" onAction={()=>setCreateOpen(true)}/>{loadError&&<div className="library-error">Database unavailable: showing the local prototype library.</div>}<div className="library-layout"><aside className="library-filters"><strong>Dimensions</strong><button className={dimension==='All'?'active':''} onClick={()=>setDimension('All')}>All activities <span>{items.length}</span></button>{(Object.keys(dimensionMeta) as Dimension[]).map(item=><button className={dimension===item?'active':''} key={item} onClick={()=>setDimension(item)}><DimensionIcon dimension={item} size="sm"/>{item}<span>{items.filter(activity=>activity.dimension===item).length}</span></button>)}</aside><section className="panel no-pad"><div className="library-top"><label className="admin-search"><Icon name="search" size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="Search activities"/></label><button>Timed & check-in</button></div><div className="activity-admin-table">{loading?<div className="library-empty">Loading activities…</div>:shown.length?shown.map(activity=><article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><h3>{activity.title}</h3><p className="activity-description">{activity.detail||'No description yet.'}</p><p>{activity.dimension} · {activity.type}{activity.type==='Timed'?` · ${activity.duration} minutes`:''}</p></div><strong>{activity.points} pts</strong><div className="activity-row-actions"><button className="activity-edit" aria-label={`Edit ${activity.title}`} onClick={()=>setEditing(activity)}><Icon name="edit" size={18}/></button><button className="activity-delete" aria-label={`Delete ${activity.title}`} onClick={()=>archiveActivity(activity)}><Icon name="trash" size={18}/></button></div></article>):<div className="library-empty">No activities found.</div>}</div></section></div>{createOpen&&<ActivityModal onClose={()=>setCreateOpen(false)} onSave={createActivity}/>} {editing&&<ActivityModal activity={editing} onClose={()=>setEditing(null)} onSave={updateActivity}/>}</>;

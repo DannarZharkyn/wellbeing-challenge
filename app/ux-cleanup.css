@@ -157,3 +157,17 @@ body * {
   .welcome-row.simple h1 { font-size: 27px; }
   .activity-form-row { grid-template-columns: 1fr; }
 }
+
+.admin-auth-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f5f6f3; }
+.admin-auth-card { width: min(440px, 100%); padding: 34px; border: 1px solid #e5e7eb; border-radius: 16px; background: #fff; box-shadow: 0 18px 50px #1111; }
+.admin-auth-card > .brand { margin-bottom: 34px; }
+.admin-auth-card > a { display: inline-block; margin-top: 24px; color: #6b7280; font-size: 13px; font-weight: 700; text-decoration: none; }
+.admin-auth-heading > span { color: #cc0000; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.admin-auth-heading h1 { margin: 8px 0; font-size: 32px; }
+.admin-auth-heading p,.admin-auth-status { margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5; }
+.admin-login-form { display: grid; gap: 17px; margin-top: 28px; }
+.admin-login-form label { color: #374151; font-size: 13px; font-weight: 700; }
+.admin-login-form input { width: 100%; min-height: 46px; display: block; margin-top: 8px; padding: 11px 13px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 15px; }
+.admin-login-form .primary-button { width: 100%; justify-content: center; }
+.admin-login-error { margin: 0; color: #b91c1c; font-size: 13px; }
+.admin-sign-out { width: 100%; margin-top: 12px; padding: 9px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; color: #6b7280; font-size: 12px; font-weight: 700; }
