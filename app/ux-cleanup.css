@@ -171,3 +171,19 @@ body * {
 .admin-login-form .primary-button { width: 100%; justify-content: center; }
 .admin-login-error { margin: 0; color: #b91c1c; font-size: 13px; }
 .admin-sign-out { width: 100%; margin-top: 12px; padding: 9px; border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; color: #6b7280; font-size: 12px; font-weight: 700; }
+.admin-competition-cards > article { position: relative; overflow: hidden; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; }
+.competition-card-open { width: 100%; min-height: 190px; display: block; padding: 22px; border: 0; background: transparent; color: inherit; text-align: left; }
+.competition-card-open > div { display: flex; align-items: center; justify-content: space-between; }
+.competition-card-open h2 { margin: 22px 0 8px; }
+.competition-card-open p { margin: 0; color: #6b7280; }
+.competition-card-open footer { margin-top: 24px; color: #6b7280; }
+.competition-delete { width: 38px; height: 38px; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #b91c1c; }
+.admin-competition-cards > article > .competition-delete { position: absolute; right: 16px; bottom: 15px; }
+.competition-delete:hover { background: #fef2f2; }
+.admin-table-row { padding: 0 !important; }
+.table-row-open { min-width: 0; display: grid; grid-template-columns: 2fr .7fr .8fr .7fr 1fr; align-items: center; gap: 12px; padding: 15px 8px 15px 18px; border: 0; background: transparent; color: inherit; text-align: left; }
+.table-row-open > div { display: flex; align-items: center; gap: 10px; }
+.competition-datetime-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+.competition-datetime-fields label { color: #596560; font-size: 13px; font-weight: 800; }
+.competition-datetime-fields input { width: 100%; }
+.competition-form-error { margin: 0 28px 12px; color: #b91c1c; font-size: 13px; }
