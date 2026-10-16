@@ -112,15 +112,18 @@ body * {
 .participant-directory > header { display: flex; align-items: center; justify-content: space-between; padding: 17px; background: #f9fafb; }
 .participant-directory > header strong { font-size: 15px; }
 .participant-directory > header span { color: #6b7280; font-size: 12px; }
-.participant-directory > button { width: 100%; display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 11px; padding: 13px 16px; border: 0; border-top: 1px solid #e5e7eb; background: #fff; text-align: left; }
-.participant-directory > button.active { background: #fff1f2; }
-.participant-directory > button > span,
+.participant-directory-row { display: grid; grid-template-columns: 1fr 42px; align-items: stretch; border-top: 1px solid #e5e7eb; background: #fff; }
+.participant-directory-row.active { background: #fff1f2; }
+.participant-directory-row > button:first-child { width: 100%; display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 11px; padding: 13px 8px 13px 16px; border: 0; background: transparent; text-align: left; }
+.participant-directory-row > button:first-child > span,
 .participant-detail > header > span { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: #f3f4f6; color: #374151; font-size: 11px; font-weight: 800; }
-.participant-directory > button div strong,
-.participant-directory > button div small { display: block; }
-.participant-directory > button div strong { font-size: 14px; }
-.participant-directory > button div small { margin-top: 4px; color: #6b7280; font-size: 12px; }
-.participant-directory > button > b { font-size: 13px; }
+.participant-directory-row div strong,
+.participant-directory-row div small { display: block; }
+.participant-directory-row div strong { font-size: 14px; }
+.participant-directory-row div small { margin-top: 4px; color: #6b7280; font-size: 12px; }
+.participant-directory-row b { font-size: 13px; }
+.participant-delete { width: 36px; height: 36px; align-self: center; display: grid; place-items: center; border: 0; border-radius: 8px; background: transparent; color: #b91c1c; }
+.participant-delete:hover { background: #fee2e2; }
 .participant-detail > header { display: flex; align-items: center; gap: 13px; padding: 20px; border-bottom: 1px solid #e5e7eb; background: #f9fafb; }
 .participant-detail h3 { margin: 0; font-size: 20px; }
 .participant-detail header p { margin: 4px 0 0; color: #6b7280; }
