@@ -235,6 +235,18 @@ body * {
 .code-confirm h3 { margin: 9px 0 5px; font-size: 18px; }
 .code-confirm p { margin: 0 0 16px; color: #56645f; }
 .code-confirm button { width: 100%; margin-top: 8px; }
+.join-preview-modal { width: min(410px,calc(100% - 24px)); position: relative; padding: 30px 24px 24px; border-radius: 22px; background: #fff; }
+.join-preview-modal h2 { margin: 16px 0 8px; font-size: 25px; }
+.join-description { margin: 0 0 18px; color: #5f6e68; font-size: 13px; line-height: 1.55; }
+.join-preview-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.join-preview-stats article { min-width: 0; display: grid; justify-items: center; gap: 5px; padding: 13px 6px; border-radius: 13px; background: #f1f6f3; color: #397760; text-align: center; }
+.join-preview-stats article strong { color: #24342e; font-size: 15px; }
+.join-preview-stats article span { color: #697570; font-size: 9px; font-weight: 700; }
+.join-preview-stats article:last-child strong { font-size: 11px; line-height: 1.25; }
+.join-preview-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 20px; }
+.join-preview-actions button { justify-content: center; }
+.code-confirm .join-description { margin-top: 13px; text-align: left; }
+.code-confirm .join-preview-stats { margin-bottom: 14px; }
 .profile-edit-modal { display: grid; gap: 13px; }
 .profile-edit-modal h2 { margin-top: 0; }
 .student-profile-stats { grid-template-columns: repeat(3,1fr)!important; }
