@@ -8,7 +8,6 @@ import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 
 type AdminView = 'Overview' | 'Competitions' | 'Activity Library' | 'Templates';
 type AdminCompetition = {id:string;name:string;type:'Individual'|'Group';status:'Active'|'Scheduled'|'Ended';participants:number;activities:number;dates:string;description?:string;code?:string;startAt?:string;endAt?:string};
-const fallbackCompetition:AdminCompetition={id:'mock-fall',name:'Fall Well-Being Challenge',type:'Individual',status:'Active',participants:48,activities:14,dates:'Oct 1 – Nov 15'};
 
 export default function AdminDashboard() {
   const supabase=getSupabaseBrowserClient();
@@ -16,7 +15,8 @@ export default function AdminDashboard() {
   const [view, setView] = useState<AdminView>('Overview');
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<AdminCompetition | null>(null);
-  const [competitions,setCompetitions]=useState<AdminCompetition[]>([fallbackCompetition]);
+  const [competitions,setCompetitions]=useState<AdminCompetition[]>([]);
+  const [competitionsLoading,setCompetitionsLoading]=useState(true);
   const [toast, setToast] = useState('');
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400); };
   useEffect(()=>{
@@ -28,8 +28,8 @@ export default function AdminDashboard() {
   useEffect(()=>{
     if(authStatus!=='signed-in'||!supabase)return;
     supabase.from('competitions').select('id,name,competition_type,status,start_at,end_at,description,competition_code,event_activities(count),participants(count)').order('created_at').then(({data})=>{
-      if(!data)return;
-      setCompetitions(data.map(row=>({id:row.id,name:row.name,type:row.competition_type==='group'?'Group':'Individual',status:row.status==='active'?'Active':row.status==='ended'?'Ended':'Scheduled',participants:row.participants?.[0]?.count??0,activities:row.event_activities?.[0]?.count??0,dates:formatCompetitionDates(row.start_at,row.end_at),description:row.description,code:row.competition_code,startAt:row.start_at,endAt:row.end_at})));
+      if(data)setCompetitions(data.map(row=>({id:row.id,name:row.name,type:row.competition_type==='group'?'Group':'Individual',status:row.status==='active'?'Active':row.status==='ended'?'Ended':'Scheduled',participants:row.participants?.[0]?.count??0,activities:row.event_activities?.[0]?.count??0,dates:formatCompetitionDates(row.start_at,row.end_at),description:row.description,code:row.competition_code,startAt:row.start_at,endAt:row.end_at})));
+      setCompetitionsLoading(false);
     });
   },[authStatus,supabase]);
   if(authStatus==='loading')return <AdminAuthShell><p className="admin-auth-status">Checking administrator access…</p></AdminAuthShell>;
@@ -38,8 +38,8 @@ export default function AdminDashboard() {
     <aside className="admin-sidebar"><Logo/><nav>{([['Overview','grid'],['Competitions','trophy'],['Activity Library','target'],['Templates','book']] as const).map(([label,icon]) => <button key={label} className={view===label?'active':''} onClick={() => {setView(label);setSelected(null);}}><Icon name={icon}/>{label}</button>)}</nav><div className="admin-sidebar-footer"><Link href="/">← Student experience</Link><div><span>PF</span><p><strong>Pedro Falci</strong><small>Administrator</small></p></div><button className="admin-sign-out" onClick={()=>supabase?.auth.signOut()}>Sign out</button></div></aside>
     <section className="admin-main"><header className="admin-topbar"><div><span>Student Wellbeing workspace</span><strong>{selected?.name ?? view}</strong></div><div><button className="icon-button"><Icon name="search"/></button><button className="avatar-button">PF</button></div></header>
       <div className="admin-content">{selected ? <AdminCompetitionDetail competition={selected} onBack={() => setSelected(null)} notify={notify}/> : <>
-        {view==='Overview'&&<Overview competitions={competitions} onCreate={()=>setCreateOpen(true)} onOpen={setSelected} onDelete={deleteCompetition}/>}
-        {view==='Competitions'&&<Competitions competitions={competitions} onCreate={()=>setCreateOpen(true)} onOpen={setSelected} onDelete={deleteCompetition}/>}
+        {view==='Overview'&&<Overview competitions={competitions} loading={competitionsLoading} onCreate={()=>setCreateOpen(true)} onOpen={setSelected} onDelete={deleteCompetition}/>}
+        {view==='Competitions'&&<Competitions competitions={competitions} loading={competitionsLoading} onCreate={()=>setCreateOpen(true)} onOpen={setSelected} onDelete={deleteCompetition}/>}
         {view==='Activity Library'&&<ActivityLibrary notify={notify}/>} 
         {view==='Templates'&&<Templates/>}
       </>}</div>
@@ -66,14 +66,14 @@ function AdminLogin(){
   return <AdminAuthShell><div className="admin-auth-heading"><span>ADMINISTRATOR ACCESS</span><h1>Sign in</h1><p>Use your approved Student Wellbeing administrator account.</p></div><form className="admin-login-form" onSubmit={submit}><label>Email address<input type="email" value={email} onChange={event=>setEmail(event.target.value)} autoComplete="username" required/></label><label>Password<input type="password" value={password} onChange={event=>setPassword(event.target.value)} autoComplete="current-password" required/></label>{error&&<p className="admin-login-error">{error}</p>}<button className="primary-button" disabled={submitting}>{submitting?'Signing in…':'Sign in'}</button></form></AdminAuthShell>
 }
 
-function Overview({competitions,onCreate,onOpen,onDelete}:{competitions:AdminCompetition[];onCreate:()=>void;onOpen:(item:AdminCompetition)=>void;onDelete:(item:AdminCompetition)=>void}) {
-  return <><AdminHeading eyebrow="" title="Overview"/><button className="admin-create-callout" onClick={onCreate}><span><strong>Create New Competition</strong><small>Set the competition basics and choose activities.</small></span><Icon name="plus" size={34}/></button><div className="list-heading"><h2>Existing Competitions</h2><span>{competitions.length} competitions</span></div><div className="admin-competition-cards">{competitions.map(item=><article key={item.id}><button className="competition-card-open" onClick={()=>onOpen(item)}><div><span className={`large-status ${item.status.toLowerCase()}`}>{item.status}</span><Icon name="chevron"/></div><h2>{item.name}</h2><p>{item.type} competition · Code {item.code??'—'}</p><footer>{item.dates}</footer></button><button className="competition-delete" aria-label={`Delete ${item.name}`} onClick={()=>onDelete(item)}><Icon name="trash" size={18}/></button></article>)}</div></>;
+function Overview({competitions,loading,onCreate,onOpen,onDelete}:{competitions:AdminCompetition[];loading:boolean;onCreate:()=>void;onOpen:(item:AdminCompetition)=>void;onDelete:(item:AdminCompetition)=>void}) {
+  return <><AdminHeading eyebrow="" title="Overview"/><button className="admin-create-callout" onClick={onCreate}><span><strong>Create New Competition</strong><small>Set the competition basics and choose activities.</small></span><Icon name="plus" size={34}/></button><div className="list-heading"><h2>Existing Competitions</h2><span>{loading?'Loading…':`${competitions.length} competitions`}</span></div>{loading?<div className="competition-loading">Loading competitions…</div>:<div className="admin-competition-cards">{competitions.map(item=><article key={item.id}><button className="competition-card-open" onClick={()=>onOpen(item)}><div><span className={`large-status ${item.status.toLowerCase()}`}>{item.status}</span><Icon name="chevron"/></div><h2>{item.name}</h2><p>{item.type} competition · Code {item.code??'—'}</p><footer>{item.dates}</footer></button><button className="competition-delete" aria-label={`Delete ${item.name}`} onClick={()=>onDelete(item)}><Icon name="trash" size={18}/></button></article>)}</div>}</>;
 }
 
-function Competitions({competitions,onCreate,onOpen,onDelete}:{competitions:AdminCompetition[];onCreate:()=>void;onOpen:(item:AdminCompetition)=>void;onDelete:(item:AdminCompetition)=>void}) {
+function Competitions({competitions,loading,onCreate,onOpen,onDelete}:{competitions:AdminCompetition[];loading:boolean;onCreate:()=>void;onOpen:(item:AdminCompetition)=>void;onDelete:(item:AdminCompetition)=>void}) {
   const [filter,setFilter]=useState('All');
   const items=filter==='All'?competitions:competitions.filter((item)=>item.status===filter);
-  return <><AdminHeading eyebrow="MANAGE" title="Competitions" text="Create, organize, and monitor every well-being competition." action="Create competition" onAction={onCreate}/><div className="admin-toolbar"><div className="tabs">{['All','Active','Scheduled'].map(item=><button className={filter===item?'active':''} key={item} onClick={()=>setFilter(item)}>{item}<span>{item==='All'?competitions.length:competitions.filter(c=>c.status===item).length}</span></button>)}</div><label className="admin-search"><Icon name="search" size={17}/><input placeholder="Search competitions"/></label></div><section className="panel no-pad"><AdminCompetitionTable items={items} onOpen={onOpen} onDelete={onDelete}/></section></>;
+  return <><AdminHeading eyebrow="MANAGE" title="Competitions" text="Create, organize, and monitor every well-being competition." action="Create competition" onAction={onCreate}/><div className="admin-toolbar"><div className="tabs">{['All','Active','Scheduled'].map(item=><button className={filter===item?'active':''} key={item} onClick={()=>setFilter(item)}>{item}<span>{item==='All'?competitions.length:competitions.filter(c=>c.status===item).length}</span></button>)}</div><label className="admin-search"><Icon name="search" size={17}/><input placeholder="Search competitions"/></label></div><section className="panel no-pad">{loading?<div className="competition-loading">Loading competitions…</div>:<AdminCompetitionTable items={items} onOpen={onOpen} onDelete={onDelete}/>}</section></>;
 }
 
 const defaultRules=`Competition rules:
