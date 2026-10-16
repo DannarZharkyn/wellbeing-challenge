@@ -238,4 +238,6 @@ body * {
 .student-profile-stats article { min-width: 0; padding: 15px 8px; }
 .student-profile-stats strong { font-size: 18px; }
 .student-profile-stats span { font-size: 9px; }
+.leave-challenge { width: 100%; margin-top: 24px; padding: 13px; border: 1px solid #dc2626; border-radius: 11px; background: #fff; color: #b91c1c; font-size: 13px; font-weight: 800; }
+.leave-challenge:hover { background: #fff1f2; }
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
