@@ -187,3 +187,4 @@ body * {
 .competition-datetime-fields label { color: #596560; font-size: 13px; font-weight: 800; }
 .competition-datetime-fields input { width: 100%; }
 .competition-form-error { margin: 0 28px 12px; color: #b91c1c; font-size: 13px; }
+.competition-validation-note { margin-right: auto; align-self: center; color: #b91c1c; font-size: 12px; font-weight: 700; }
