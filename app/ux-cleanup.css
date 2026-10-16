@@ -189,3 +189,53 @@ body * {
 .competition-form-error { margin: 0 28px 12px; color: #b91c1c; font-size: 13px; }
 .competition-validation-note { margin-right: auto; align-self: center; color: #b91c1c; font-size: 12px; font-weight: 700; }
 .competition-loading { min-height: 150px; display: grid; place-items: center; color: #6b7280; font-size: 14px; font-weight: 700; }
+
+/* Student prototype registration and enrollment states. */
+.student-loading { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 20px; color: #66736f; }
+.registration-screen { min-height: 100vh; padding: 24px 18px 42px; }
+.registration-screen>section { width: 100%; }
+.registration-welcome { position: relative; overflow: hidden; min-height: 245px; margin: 24px 0; padding: 30px 155px 28px 24px; border-radius: 24px; background: linear-gradient(145deg,#e2efe8,#c5dbd0); }
+.registration-welcome img { width: 155px; height: auto; position: absolute; right: -7px; bottom: -35px; }
+.registration-welcome>span { color: #397760; font-size: 11px; font-weight: 900; letter-spacing: .13em; }
+.registration-welcome h1 { margin: 12px 0 10px; font-size: 30px; line-height: 1.05; }
+.registration-welcome p { margin: 0; color: #52625c; font-size: 13px; line-height: 1.5; }
+.registration-form { display: grid; gap: 16px; padding: 24px; border: 1px solid #e4e7e4; border-radius: 20px; background: #fff; }
+.registration-name-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.registration-form label,.profile-edit-modal label,.group-code-modal label { color: #46534e; font-size: 12px; font-weight: 800; }
+.registration-form input,.registration-form select,.profile-edit-modal input,.profile-edit-modal select,.group-code-modal input { width: 100%; min-height: 46px; display: block; margin-top: 7px; padding: 11px 12px; border: 1px solid #dfe4e1; border-radius: 10px; background: #fff; color: #26332e; font-size: 14px; }
+.registration-form>.primary-button { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 5px; }
+.registration-form>small { color: #87918d; font-size: 10px; text-align: center; }
+.student-empty-home,.challenges-empty,.locked-activities { margin: 20px 0 28px; padding: 28px 22px; border: 1px solid #dfe6e2; border-radius: 20px; background: #fff; text-align: center; }
+.student-empty-home>svg,.challenges-empty>svg,.locked-activities>svg { color: #4d846f; }
+.student-empty-home h2,.challenges-empty h2,.locked-activities h2 { margin: 14px 0 7px; font-size: 19px; }
+.student-empty-home p,.challenges-empty p,.locked-activities p { margin: 0 0 18px; color: #697570; font-size: 12px; line-height: 1.5; }
+.challenges-empty>div { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.challenges-empty a { display: grid; place-items: center; text-decoration: none; }
+.available-challenges { display: grid; gap: 12px; }
+.public-competition-card { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; padding: 18px; border: 1px solid #e1e6e3; border-radius: 17px; background: #fff; }
+.public-competition-card h3 { margin: 13px 0 6px; font-size: 17px; }
+.public-competition-card p { margin: 0 0 12px; color: #697570; font-size: 11px; line-height: 1.5; }
+.public-competition-card small { display: flex; align-items: center; gap: 6px; color: #66736f; font-size: 10px; font-weight: 700; }
+.public-competition-card>.primary-button { min-width: 72px; }
+.all-joined { display: flex; align-items: center; gap: 10px; padding: 18px; border-radius: 15px; background: #eaf3ee; color: #397760; font-size: 12px; font-weight: 800; }
+.challenge-actions { display: flex; justify-content: center; margin: 17px 0 30px; }
+.challenge-actions button { display: flex; align-items: center; gap: 7px; padding: 10px 14px; border: 1px solid #dfe4e1; border-radius: 10px; background: #fff; color: #397760; font-weight: 800; }
+.group-code-modal,.profile-edit-modal { width: min(390px,calc(100% - 24px)); position: relative; padding: 30px 24px 24px; border-radius: 22px; background: #fff; }
+.group-code-modal .modal-icon { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 16px; background: #e7f1ec; color: #397760; }
+.group-code-modal h2,.profile-edit-modal h2 { margin: 18px 0 7px; font-size: 24px; }
+.group-code-modal>p { margin: 0 0 20px; color: #697570; font-size: 12px; line-height: 1.5; }
+.group-code-modal>.primary-button,.profile-edit-modal>.primary-button { width: 100%; margin-top: 15px; }
+.group-code-modal>small { display: block; margin-top: 12px; color: #87918d; font-size: 10px; text-align: center; }
+.code-error { margin: 9px 0 0!important; color: #b42318!important; font-size: 11px!important; }
+.code-confirm { margin-top: 20px; padding: 18px; border-radius: 15px; background: #f2f7f4; text-align: center; }
+.code-confirm>span { color: #397760; font-size: 9px; font-weight: 900; letter-spacing: .12em; }
+.code-confirm h3 { margin: 9px 0 5px; font-size: 18px; }
+.code-confirm p { margin: 0 0 16px; color: #56645f; }
+.code-confirm button { width: 100%; margin-top: 8px; }
+.profile-edit-modal { display: grid; gap: 13px; }
+.profile-edit-modal h2 { margin-top: 0; }
+.student-profile-stats { grid-template-columns: repeat(3,1fr)!important; }
+.student-profile-stats article { min-width: 0; padding: 15px 8px; }
+.student-profile-stats strong { font-size: 18px; }
+.student-profile-stats span { font-size: 9px; }
+@media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
