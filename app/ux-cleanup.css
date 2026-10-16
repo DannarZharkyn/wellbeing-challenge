@@ -255,4 +255,20 @@ body * {
 .student-profile-stats span { font-size: 9px; }
 .leave-challenge { width: 100%; margin-top: 24px; padding: 13px; border: 1px solid #dc2626; border-radius: 11px; background: #fff; color: #b91c1c; font-size: 13px; font-weight: 800; }
 .leave-challenge:hover { background: #fff1f2; }
+.categorized-activities { min-width: 0; }
+.activity-view-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 5px; border-radius: 14px; background: #e9eeeb; }
+.activity-view-tabs button { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 10px; border: 0; border-radius: 10px; background: transparent; color: #66736f; font-size: 12px; font-weight: 800; }
+.activity-view-tabs button.active { background: #fff; color: #397760; box-shadow: 0 3px 10px #263c3314; }
+.activity-view-tabs span { min-width: 20px; padding: 3px 6px; border-radius: 999px; background: #dfe8e3; font-size: 9px; }
+.activity-scroll { max-height: 530px; overflow-y: auto; margin-top: 14px; padding-right: 4px; scrollbar-width: thin; scrollbar-color: #a8bbb2 transparent; }
+.dimension-activity-group { margin-bottom: 14px; overflow: hidden; border: 1px solid #dfe5e2; border-radius: 17px; background: #fff; }
+.dimension-activity-group > header { display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-bottom: 1px solid #e6ebe8; background: #f2f7f4; }
+.dimension-activity-group > header h3 { margin: 0; font-size: 14px; }
+.dimension-activity-group > header span { display: block; margin-top: 3px; color: #76827d; font-size: 10px; }
+.dimension-activity-group .quick-actions { display: block; }
+.dimension-activity-group .quick-actions article { border: 0; border-bottom: 1px solid #edf0ee; border-radius: 0; }
+.dimension-activity-group .quick-actions article:last-child { border-bottom: 0; }
+.activity-empty-state { display: grid; justify-items: center; gap: 8px; padding: 42px 18px; border: 1px dashed #cdd9d3; border-radius: 17px; background: #f7faf8; color: #397760; text-align: center; }
+.activity-empty-state strong { color: #26342f; font-size: 15px; }
+.activity-empty-state span { color: #71807a; font-size: 11px; }
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
