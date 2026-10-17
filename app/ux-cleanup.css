@@ -271,4 +271,17 @@ body * {
 .activity-empty-state { display: grid; justify-items: center; gap: 8px; padding: 42px 18px; border: 1px dashed #cdd9d3; border-radius: 17px; background: #f7faf8; color: #397760; text-align: center; }
 .activity-empty-state strong { color: #26342f; font-size: 15px; }
 .activity-empty-state span { color: #71807a; font-size: 11px; }
+.edit-competition-modal { width: min(860px,100%); }
+.edit-competition-modal .form-body { overflow-y: auto; }
+.edit-activity-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 6px 0 12px; }
+.edit-activity-heading strong,.edit-activity-heading span { display: block; }
+.edit-activity-heading strong { font-size: 15px; }
+.edit-activity-heading span { margin-top: 4px; color: #6b7280; font-size: 11px; }
+.edit-activity-heading b { flex: none; color: #397760; font-size: 12px; }
+.edit-activity-list { max-height: 310px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-right: 5px; }
+.edit-activity-list section { overflow: hidden; border: 1px solid #e3e7e5; border-radius: 12px; }
+.edit-activity-list h3 { margin: 0; padding: 10px 12px; background: #f3f6f4; font-size: 12px; }
+.edit-activity-list label { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-top: 1px solid #edf0ee; color: #374151; font-size: 12px; font-weight: 600; }
+.edit-activity-list input { width: 16px; height: 16px; accent-color: #cc0000; }
+@media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}}
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
