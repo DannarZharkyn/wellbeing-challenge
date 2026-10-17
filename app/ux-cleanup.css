@@ -256,6 +256,8 @@ body * {
 .student-profile-stats article { min-width: 0; padding: 15px 8px; }
 .student-profile-stats strong { font-size: 18px; }
 .student-profile-stats span { font-size: 9px; }
+.student-log-out { width: 100%; margin-top: 18px; padding: 13px; border: 1px solid #d7ddda; border-radius: 11px; background: #fff; color: #5f6c67; font-size: 13px; font-weight: 800; }
+.student-log-out:hover { border-color: #d7a7a7; background: #fff7f7; color: #b42318; }
 .leave-challenge { width: 100%; margin-top: 24px; padding: 13px; border: 1px solid #dc2626; border-radius: 11px; background: #fff; color: #b91c1c; font-size: 13px; font-weight: 800; }
 .leave-challenge:hover { background: #fff1f2; }
 .categorized-activities { min-width: 0; }
