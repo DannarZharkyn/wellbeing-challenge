@@ -283,5 +283,8 @@ body * {
 .edit-activity-list h3 { margin: 0; padding: 10px 12px; background: #f3f6f4; font-size: 12px; }
 .edit-activity-list label { display: flex; align-items: center; gap: 9px; padding: 10px 12px; border-top: 1px solid #edf0ee; color: #374151; font-size: 12px; font-weight: 600; }
 .edit-activity-list input { width: 16px; height: 16px; accent-color: #cc0000; }
+.leaderboard-empty { display: grid; justify-items: center; gap: 8px; padding: 54px 20px; color: #cc0000; text-align: center; }
+.leaderboard-empty strong { color: #111827; font-size: 17px; }
+.leaderboard-empty span { color: #6b7280; font-size: 12px; }
 @media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}}
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
