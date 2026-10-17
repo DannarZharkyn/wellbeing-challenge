@@ -289,5 +289,28 @@ body * {
 .leaderboard-empty { display: grid; justify-items: center; gap: 8px; padding: 54px 20px; color: #cc0000; text-align: center; }
 .leaderboard-empty strong { color: #111827; font-size: 17px; }
 .leaderboard-empty span { color: #6b7280; font-size: 12px; }
+.ranking-page .segmented { width: 100%; margin: 0 0 22px; }
+.ranking-page .segmented button { min-height: 42px; font-size: 12px; }
+.ranking-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
+.ranking-summary>div { padding: 16px; border: 1px solid #dfe6e2; border-radius: 16px; background: #fff; }
+.ranking-summary span,.ranking-summary strong,.ranking-summary small { display: block; }
+.ranking-summary span { color: #73817b; font-size: 9px; font-weight: 900; letter-spacing: .09em; }
+.ranking-summary strong { margin: 7px 0 4px; color: #26342f; font: 700 25px Georgia,serif; }
+.ranking-summary small { color: #71807a; font-size: 10px; }
+.ranking-podium { min-height: 215px; display: flex; align-items: end; justify-content: center; gap: 7px; padding: 24px 10px 0; border-radius: 22px 22px 0 0; background: linear-gradient(145deg,#285f51,#1e4037); color: #fff; }
+.ranking-podium article { width: 31%; min-height: 145px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; position: relative; padding: 20px 7px 12px; border-radius: 17px 17px 0 0; background: #ffffff17; text-align: center; }
+.ranking-podium article.place-1 { min-height: 180px; order: 2; background: #ffffff26; }
+.ranking-podium article.place-2 { order: 1; }
+.ranking-podium article.place-3 { order: 3; }
+.ranking-podium article.current { box-shadow: inset 0 0 0 2px #e7c96d; }
+.podium-crown { height: 20px; color: #f3d67b; font-size: 22px; line-height: 1; }
+.podium-person { width: 48px; height: 48px; display: grid; place-items: center; margin: 7px 0; border-radius: 50%; background: #edf4f0; color: #397760; font-size: 12px; font-weight: 900; }
+.ranking-podium strong { max-width: 100%; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-podium small { margin-top: 5px; color: #dbe8e2; font-size: 9px; }
+.live-leaderboard { overflow: hidden; border-top: 0; border-radius: 0 0 18px 18px; }
+.live-leaderboard h3 { display: flex; align-items: center; gap: 6px; }
+.live-leaderboard h3 em { padding: 3px 6px; border-radius: 999px; background: #dcece4; color: #397760; font-size: 8px; font-style: normal; text-transform: uppercase; }
+.live-leaderboard article.you { border-left: 3px solid #e4bb4f; background: #fff9e8; }
+.compact-empty { margin-top: 0; }
 @media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}}
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
