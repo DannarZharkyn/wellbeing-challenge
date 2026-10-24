@@ -29,6 +29,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preload" as="image" href="/terrier-mascot-v2.png" fetchPriority="high" />
+      </head>
       <body>{children}</body>
     </html>
   );
