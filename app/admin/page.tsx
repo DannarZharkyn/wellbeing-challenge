@@ -17,7 +17,7 @@ function effectiveCompetitionStatus(start:string,end:string):AdminCompetition['s
 export default function AdminDashboard() {
   const supabase=getSupabaseBrowserClient();
   const [authStatus,setAuthStatus]=useState<'loading'|'signed-out'|'signed-in'>(supabase?'loading':'signed-out');
-  const [view, setView] = useState<AdminView>('Main Panel');
+  const [view, setView] = useState<AdminView>(()=>{if(typeof window==='undefined')return 'Main Panel';const requested=new URLSearchParams(window.location.search).get('view');if(requested==='activity-library')return 'Activity Library';if(requested==='templates')return 'Templates';const saved=localStorage.getItem(adminViewKey) as AdminView|null;return saved&&['Main Panel','Activity Library','Templates'].includes(saved)?saved:'Main Panel';});
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<AdminCompetition | null>(null);
   const [competitions,setCompetitions]=useState<AdminCompetition[]>([]);
