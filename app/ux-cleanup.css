@@ -269,11 +269,20 @@ body * {
 .activity-scroll { max-height: 530px; overflow-y: auto; margin-top: 14px; padding-right: 4px; scrollbar-width: thin; scrollbar-color: #a8bbb2 transparent; }
 .dimension-activity-group { margin-bottom: 14px; overflow: hidden; border: 1px solid #dfe5e2; border-radius: 17px; background: #fff; }
 .dimension-activity-group > header { display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-bottom: 1px solid #e6ebe8; background: #f2f7f4; }
+.dimension-activity-group > header > .dimension-icon { display: grid; margin: 0; }
 .dimension-activity-group > header h3 { margin: 0; font-size: 14px; }
-.dimension-activity-group > header span { display: block; margin-top: 3px; color: #76827d; font-size: 10px; }
+.dimension-activity-group > header > div > span { display: block; margin-top: 3px; color: #76827d; font-size: 10px; }
 .dimension-activity-group .quick-actions { display: block; }
 .dimension-activity-group .quick-actions article { border: 0; border-bottom: 1px solid #edf0ee; border-radius: 0; }
 .dimension-activity-group .quick-actions article:last-child { border-bottom: 0; }
+
+.competition-detail-hero.compact { padding: 20px 22px; border-radius: 15px; background: #285d51; }
+.competition-detail-hero.compact .competition-kind { display: block; color: #cfe1da; font-size: 8px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+.competition-detail-hero.compact h1 { margin: 7px 0 6px; font-size: 24px; }
+.competition-detail-hero.compact p { margin: 0 0 8px; font-size: 11px; line-height: 1.45; }
+.competition-detail-hero .description-collapsed { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.competition-detail-hero .description-toggle { margin: 0 0 11px; padding: 0; border: 0; background: transparent; color: #fff; font-size: 10px; font-weight: 800; text-decoration: underline; }
+.competition-detail-hero.compact > div { gap: 13px; font-size: 9px; }
 .activity-empty-state { display: grid; justify-items: center; gap: 8px; padding: 42px 18px; border: 1px dashed #cdd9d3; border-radius: 17px; background: #f7faf8; color: #397760; text-align: center; }
 .activity-empty-state strong { color: #26342f; font-size: 15px; }
 .activity-empty-state span { color: #71807a; font-size: 11px; }
