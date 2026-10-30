@@ -328,6 +328,9 @@ body * {
 .spreadsheet-template-button:hover { text-decoration: underline; }
 .csv-success>span,.csv-success small { display: block; }
 .csv-success small { margin-top: 3px; color: #607069; font-size: 8px; font-weight: 500; line-height: 1.35; }
+.assigned-activity-delete { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 8px !important; color: #cc0000 !important; cursor: pointer; }
+.assigned-activity-delete:hover { background: #fff0f0 !important; }
+.assigned-activity-delete:disabled { cursor: wait; opacity: .45; }
 @media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}}
 @media(max-width:650px){.spreadsheet-template-button{display:block;margin:10px 0 0}}
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
