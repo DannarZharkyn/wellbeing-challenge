@@ -342,23 +342,23 @@ body * {
 .schedule-fields { align-items: start; gap: 24px; margin: 24px 0 26px; }
 .schedule-field { min-width: 0; padding: 17px !important; border: 1px solid #e4e7ec !important; border-radius: 12px !important; background: #fafbfc; }
 .schedule-field legend { padding: 0 7px; }
-.schedule-control-grid { display: grid !important; grid-template-columns: minmax(150px,1.45fr) 72px 78px !important; gap: 10px !important; }
+.schedule-control-grid { display: grid !important; grid-template-columns: minmax(120px,1.5fr) 60px 66px 92px !important; align-items: end; gap: 8px !important; }
 .schedule-control-grid label,
 .period-field { min-width: 0; }
 .schedule-control-grid label > span,
 .period-field > span { display: block; margin-bottom: 6px; color: #667085; font-size: 11px; font-weight: 700; letter-spacing: .02em; }
 .schedule-control-grid input,
 .schedule-control-grid select { width: 100%; min-height: 44px !important; margin: 0 !important; padding: 9px 10px !important; border-color: #d0d5dd !important; background: #fff !important; color: #1f2937; font-size: 14px !important; font-weight: 600; }
-.period-field { grid-column: 1/-1; }
-.period-field .ampm { width: 100%; min-height: 44px; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #d0d5dd; border-radius: 9px; background: #fff; }
-.period-field .ampm button { min-width: 0; min-height: 42px; padding: 8px 12px; font-size: 13px !important; font-weight: 750; }
+.period-field { grid-column: auto; }
+.period-field .ampm { width: 100%; min-height: 44px; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid #d0d5dd; border-radius: 9px; background: #fff; }
+.period-field .ampm button { min-width: 0; min-height: 42px; padding: 7px 5px; font-size: 11px !important; font-weight: 800; }
 .period-field .ampm button + button { border-left: 1px solid #e4e7ec; }
 .period-field .ampm button.active { background: #cc0000; color: #fff; }
 .create-modal .type-options button { min-height: 88px; padding: 17px; }
 .create-modal .type-options strong { font-size: 15px; font-weight: 750; }
 .create-modal .type-options small { margin-top: 5px; color: #667085; font-size: 12px; line-height: 1.4; }
 .create-modal .type-options button.active small { color: #b42318; }
-@media(max-width:1100px){.schedule-fields{grid-template-columns:1fr}.schedule-control-grid{grid-template-columns:minmax(160px,1fr) 90px 90px 160px!important}.period-field{grid-column:auto}}
+@media(max-width:1100px){.schedule-fields{grid-template-columns:1fr}.schedule-control-grid{grid-template-columns:minmax(160px,1fr) 90px 90px 112px!important}}
 @media(max-width:700px){.schedule-field{padding:14px!important}.schedule-control-grid{grid-template-columns:1fr 1fr!important}.schedule-control-grid label:first-child{grid-column:1/-1}.period-field{grid-column:1/-1}}
 @media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}}
 @media(max-width:650px){.spreadsheet-template-button{display:block;margin:10px 0 0}}
