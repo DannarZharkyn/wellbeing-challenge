@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { activities, dimensionMeta, type Dimension } from '../prototype-data';
 import { DimensionIcon, Icon, Logo } from '../ui';
@@ -265,8 +265,23 @@ function scheduleDateTime(value:ScheduleValue){
   return `${value.date}T${String(hour24).padStart(2,'0')}:${value.minute}`;
 }
 
+const wheelHours=Array.from({length:12},(_,index)=>String(index+1));
+const wheelMinutes=Array.from({length:60},(_,index)=>String(index).padStart(2,'0'));
+const wheelPeriods=['AM','PM'];
+function WheelColumn({label,options,value,onChange}:{label:string;options:string[];value:string;onChange:(value:string)=>void}){
+  const ref=useRef<HTMLDivElement>(null);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);const itemHeight=40;
+  useEffect(()=>{const index=Math.max(0,options.indexOf(value));ref.current?.scrollTo({top:index*itemHeight});},[options,value]);
+  function selectFromScroll(){if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>{const index=Math.max(0,Math.min(options.length-1,Math.round((ref.current?.scrollTop??0)/itemHeight)));if(options[index]!==value)onChange(options[index]);},90);}
+  return <div className="wheel-column"><span>{label}</span><div ref={ref} className="wheel-scroll" onScroll={selectFromScroll}>{options.map(option=><button type="button" key={option} className={option===value?'selected':''} onClick={()=>onChange(option)}>{option}</button>)}</div></div>;
+}
+
+function TimeWheelPicker({legend,value,onChange}:{legend:string;value:ScheduleValue;onChange:(value:ScheduleValue)=>void}){
+  const [open,setOpen]=useState(false);
+  return <div className="time-wheel-picker"><span>Time</span><button type="button" className={open?'time-wheel-trigger active':'time-wheel-trigger'} aria-label={`${legend} time`} aria-expanded={open} onClick={()=>setOpen(current=>!current)}><Icon name="clock" size={16}/><strong>{value.hour}:{value.minute}</strong><small>{value.period}</small><b>⌄</b></button>{open&&<div className="time-wheel-popover"><div className="wheel-selection"/><div className="time-wheels"><WheelColumn label="Hour" options={wheelHours} value={value.hour} onChange={hour=>onChange({...value,hour})}/><WheelColumn label="Minute" options={wheelMinutes} value={value.minute} onChange={minute=>onChange({...value,minute})}/><WheelColumn label="Period" options={wheelPeriods} value={value.period} onChange={period=>onChange({...value,period:period as 'AM'|'PM'})}/></div><button type="button" className="wheel-done" onClick={()=>setOpen(false)}>Done</button></div>}</div>;
+}
+
 function ScheduleField({legend,value,onChange}:{legend:string;value:ScheduleValue;onChange:(value:ScheduleValue)=>void}){
-  return <fieldset className="schedule-field"><legend>{legend}</legend><div className="schedule-control-grid"><label><span>Date</span><input aria-label={`${legend} date`} type="date" value={value.date} onChange={event=>onChange({...value,date:event.target.value})}/></label><label><span>Hour</span><select aria-label={`${legend} hour`} value={value.hour} onChange={event=>onChange({...value,hour:event.target.value})}>{Array.from({length:12},(_,index)=>String(index+1)).map(hour=><option key={hour}>{hour}</option>)}</select></label><label><span>Minute</span><select aria-label={`${legend} minute`} value={value.minute} onChange={event=>onChange({...value,minute:event.target.value})}>{Array.from({length:60},(_,index)=>String(index).padStart(2,'0')).map(minute=><option key={minute}>{minute}</option>)}</select></label><div className="period-field"><span>Period</span><div className="ampm" aria-label={`${legend} AM or PM`}><button type="button" className={value.period==='AM'?'active':''} onClick={()=>onChange({...value,period:'AM'})}>AM</button><button type="button" className={value.period==='PM'?'active':''} onClick={()=>onChange({...value,period:'PM'})}>PM</button></div></div></div></fieldset>;
+  return <fieldset className="schedule-field"><legend>{legend}</legend><div className="schedule-control-grid"><label><span>Date</span><input aria-label={`${legend} date`} type="date" value={value.date} onChange={event=>onChange({...value,date:event.target.value})}/></label><TimeWheelPicker legend={legend} value={value} onChange={onChange}/></div></fieldset>;
 }
 
 type EditableActivity={id:string;title:string;dimension:Dimension};
