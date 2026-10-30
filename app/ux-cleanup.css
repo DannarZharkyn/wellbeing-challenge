@@ -324,5 +324,10 @@ body * {
 .live-leaderboard h3 em { padding: 3px 6px; border-radius: 999px; background: #dcece4; color: #397760; font-size: 8px; font-style: normal; text-transform: uppercase; }
 .live-leaderboard article.you { border-left: 3px solid #e4bb4f; background: #fff9e8; }
 .compact-empty { margin-top: 0; }
+.spreadsheet-template-button { margin-left: 10px; padding: 0; border: 0; background: none; color: #cc0000; font-size: 8px; font-weight: 800; cursor: pointer; }
+.spreadsheet-template-button:hover { text-decoration: underline; }
+.csv-success>span,.csv-success small { display: block; }
+.csv-success small { margin-top: 3px; color: #607069; font-size: 8px; font-weight: 500; line-height: 1.35; }
 @media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}}
+@media(max-width:650px){.spreadsheet-template-button{display:block;margin:10px 0 0}}
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
