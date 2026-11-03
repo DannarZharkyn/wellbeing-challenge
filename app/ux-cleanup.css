@@ -332,6 +332,31 @@ body * {
 .assigned-activity-delete:hover { background: #fff0f0 !important; }
 .assigned-activity-delete:disabled { cursor: wait; opacity: .45; }
 
+.past-challenges { margin-top: 28px; }
+.past-challenge-list { display: grid; gap: 10px; }
+.past-challenge-card { width: 100%; display: grid; grid-template-columns: 42px minmax(0,1fr) auto 18px; align-items: center; gap: 12px; padding: 15px; border: 1px solid #dfe5e2; border-radius: 16px; background: #fff; color: #26342f; text-align: left; transition: border-color .18s,transform .18s,box-shadow .18s; }
+.past-challenge-card:hover { transform: translateY(-1px); border-color: #a9bcb4; box-shadow: 0 8px 22px #263c3310; }
+.past-challenge-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: #f4ead0; color: #9a7220; }
+.past-challenge-card h3,.past-challenge-card p,.past-challenge-card small { display: block; margin: 0; }
+.past-challenge-card h3 { margin: 3px 0; font-size: 14px; }
+.past-challenge-card p,.past-challenge-card small { color: #71807a; font-size: 9px; }
+.past-status { color: #397760; font-size: 8px; font-weight: 900; letter-spacing: .1em; }
+.past-challenge-result { min-width: 62px; text-align: right; }
+.past-challenge-result strong,.past-challenge-result span,.past-challenge-result small { display: block; }
+.past-challenge-result strong { font-size: 16px; }
+.past-challenge-result span { color: #397760; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.past-challenge-result small { margin-top: 4px; }
+.competition-detail-hero.compact.past-hero { background: linear-gradient(145deg,#42564f,#263c35); }
+.final-results-card { display: grid; grid-template-columns: .9fr 1.1fr; gap: 10px; margin: 12px 0; }
+.final-results-card>div { min-width: 0; padding: 16px; border: 1px solid #dfe5e2; border-radius: 15px; background: #fff; }
+.final-results-card span,.final-results-card strong,.final-results-card small { display: block; }
+.final-results-card span { color: #71807a; font-size: 8px; font-weight: 900; letter-spacing: .09em; }
+.final-results-card strong { margin: 6px 0 3px; color: #26342f; font-size: 20px; }
+.final-results-card small { color: #71807a; font-size: 9px; line-height: 1.35; }
+.final-winner { position: relative; padding-left: 48px !important; background: #fffaf0 !important; }
+.final-winner>svg { position: absolute; top: 17px; left: 16px; color: #b08225; }
+.competition-detail .quick-actions .all-joined { padding: 25px 14px; border: 1px dashed #ccd7d2; border-radius: 14px; color: #71807a; text-align: center; }
+
 /* Keep the date/time controls readable and prevent the AM/PM selector from colliding with adjacent fields. */
 .create-modal { color: #1f2937; }
 .create-modal > header h2 { letter-spacing: -.025em; }
@@ -375,3 +400,4 @@ body * {
 @media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}}
 @media(max-width:650px){.spreadsheet-template-button{display:block;margin:10px 0 0}}
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
+@media(max-width:380px){.past-challenge-card{grid-template-columns:38px minmax(0,1fr) 16px}.past-challenge-result{display:none}.final-results-card{grid-template-columns:1fr}}
