@@ -395,9 +395,40 @@ body * {
 .create-modal .type-options strong { font-size: 15px; font-weight: 750; }
 .create-modal .type-options small { margin-top: 5px; color: #667085; font-size: 12px; line-height: 1.4; }
 .create-modal .type-options button.active small { color: #b42318; }
+.group-enrollment-options { margin-top: 18px; }
+.group-enrollment-options > div:first-of-type { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.group-enrollment-options > div:first-of-type > button { min-height: 76px; padding: 14px 16px; border: 1px solid #e1e5e3; border-radius: 10px; background: #fff; color: #344054; text-align: left; }
+.group-enrollment-options > div:first-of-type > button.active { border-color: #cc0000; background: #fff5f5; color: #b42318; box-shadow: inset 0 0 0 1px #cc000014; }
+.group-enrollment-options button strong,.group-enrollment-options button small { display: block; }
+.group-enrollment-options button strong { font-size: 13px; }
+.group-enrollment-options button small { margin-top: 5px; color: #667085; font-size: 11px; line-height: 1.4; }
+.participant-upload { margin-top: 12px; padding: 15px; border: 1px dashed #cbd5d1; border-radius: 11px; background: #fafcfb; }
+.participant-upload > div:first-child strong,.participant-upload > div:first-child span { display: block; }
+.participant-upload > div:first-child strong { font-size: 13px; }
+.participant-upload > div:first-child span { margin-top: 4px; color: #667085; font-size: 11px; }
+.participant-upload > label { display: inline-flex; margin-top: 12px; }
+.participant-upload > label input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.participant-upload > label span { padding: 9px 12px; border: 1px solid #d9dfdc; border-radius: 8px; background: #fff; color: #246b59; font-size: 12px; font-weight: 750; cursor: pointer; }
+.participant-import-summary { display: flex; align-items: center; gap: 9px; margin-top: 12px; padding: 10px 12px; border-radius: 9px; background: #edf7f2; color: #246b59; }
+.participant-import-summary strong,.participant-import-summary small { display: block; }
+.participant-import-summary strong { font-size: 12px; }
+.participant-import-summary small { margin-top: 3px; color: #667085; font-size: 10px; }
+.library-activity-picker { margin-top: 14px; overflow: hidden; border: 1px solid #e1e5e3; border-radius: 11px; background: #fff; }
+.library-activity-picker > header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #f7f9f8; }
+.library-activity-picker > header strong,.library-activity-picker > header span { display: block; }
+.library-activity-picker > header strong { font-size: 12px; }
+.library-activity-picker > header span { margin-top: 3px; color: #667085; font-size: 10px; }
+.library-activity-picker > header b { color: #246b59; font-size: 11px; }
+.library-activity-picker > div { max-height: 190px; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; }
+.library-activity-picker label { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-top: 1px solid #edf0ee; }
+.library-activity-picker label:nth-child(odd) { border-right: 1px solid #edf0ee; }
+.library-activity-picker input { width: 16px; height: 16px; flex: 0 0 auto; accent-color: #cc0000; }
+.library-activity-picker label strong,.library-activity-picker label small { display: block; }
+.library-activity-picker label strong { color: #344054; font-size: 11px; }
+.library-activity-picker label small { margin-top: 2px; color: #7a8581; font-size: 9px; }
 @media(max-width:1100px){.schedule-fields{grid-template-columns:1fr}.schedule-control-grid{grid-template-columns:minmax(170px,1.4fr) minmax(170px,1fr)!important}}
 @media(max-width:700px){.schedule-field{padding:14px!important}.schedule-control-grid{grid-template-columns:1fr!important}.time-wheel-popover{left:0;right:auto;width:min(280px,calc(100vw - 70px))}}
-@media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}}
+@media(max-width:650px){.edit-activity-list{grid-template-columns:1fr}.competition-datetime-fields{grid-template-columns:1fr}.group-enrollment-options>div:first-of-type,.library-activity-picker>div{grid-template-columns:1fr}.library-activity-picker label:nth-child(odd){border-right:0}}
 @media(max-width:650px){.spreadsheet-template-button{display:block;margin:10px 0 0}}
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
 @media(max-width:380px){.past-challenge-card{grid-template-columns:38px minmax(0,1fr) 16px}.past-challenge-result{display:none}.final-results-card{grid-template-columns:1fr}}

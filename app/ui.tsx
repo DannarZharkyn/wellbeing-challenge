@@ -42,5 +42,5 @@ export function DimensionIcon({ dimension, size = 'md' }: { dimension: Dimension
 }
 
 export function Logo({ compact = false }: { compact?: boolean }) {
-  return <div className={`brand ${compact ? 'compact' : ''}`}><span className="brand-mark">BU</span>{!compact && <span><strong>Well-Being</strong><small>Challenge</small></span>}</div>;
+  return <div className={`brand ${compact ? 'compact' : ''}`}><span className="brand-mark">BU</span>{!compact && <span><strong>Wellbeing</strong><small>Challenge</small></span>}</div>;
 }
