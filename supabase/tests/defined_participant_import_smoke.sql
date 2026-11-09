@@ -5,6 +5,7 @@ declare
   v_admin uuid;
   v_competition uuid;
   v_profile uuid;
+  v_mismatch_profile uuid;
   v_activity_ids uuid[];
   v_count bigint;
 begin
@@ -22,9 +23,10 @@ begin
   select public.import_competition_participants(
     v_competition,
     '[{"first_name":"Exact","last_name":"Student","email":"defined-exact-smoke@example.com"},
-      {"first_name":"Waiting","last_name":"Student","email":"defined-waiting-smoke@example.com"}]'::jsonb
+      {"first_name":"Waiting","last_name":"Student","email":"defined-waiting-smoke@example.com"},
+      {"first_name":"Roster","last_name":"Identity","email":"defined-mismatch-smoke@example.com"}]'::jsonb
   ) into v_count;
-  if v_count <> 2 then raise exception 'Expected 2 imported participants, got %', v_count; end if;
+  if v_count <> 3 then raise exception 'Expected 3 imported participants, got %', v_count; end if;
 
   select public.register_student_profile(
     null, 'Exact', 'Student', 'defined-exact-smoke@example.com', 'College of Engineering'
@@ -40,6 +42,16 @@ begin
       and email = 'defined-waiting-smoke@example.com'
       and student_profile_id is not null
   ) then raise exception 'Unregistered imported participant should remain unassigned'; end if;
+
+  select public.register_student_profile(
+    null, 'Different', 'Identity', 'defined-mismatch-smoke@example.com', 'College of Engineering'
+  ) into v_mismatch_profile;
+  if exists (
+    select 1 from public.participants
+    where competition_id = v_competition
+      and email = 'defined-mismatch-smoke@example.com'
+      and student_profile_id = v_mismatch_profile
+  ) then raise exception 'A mismatched roster name must not claim a preloaded participant row'; end if;
 
   select array_agg(id order by id) into v_activity_ids
   from (select id from public.activities where is_active = true limit 2) selected;
