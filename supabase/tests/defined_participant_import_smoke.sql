@@ -43,15 +43,40 @@ begin
       and student_profile_id is not null
   ) then raise exception 'Unregistered imported participant should remain unassigned'; end if;
 
-  select public.register_student_profile(
-    null, 'Different', 'Identity', 'defined-mismatch-smoke@example.com', 'College of Engineering'
-  ) into v_mismatch_profile;
+  begin
+    select public.register_student_profile(
+      null, 'Different', 'Identity', 'defined-mismatch-smoke@example.com', 'College of Engineering'
+    ) into v_mismatch_profile;
+    raise exception 'A mismatched roster identity was incorrectly allowed to register';
+  exception
+    when others then
+      if sqlerrm = 'A mismatched roster identity was incorrectly allowed to register' then
+        raise;
+      end if;
+      if position('organizer participant list under a different name' in sqlerrm) = 0 then
+        raise exception 'Unexpected mismatch error: %', sqlerrm;
+      end if;
+  end;
+
   if exists (
-    select 1 from public.participants
-    where competition_id = v_competition
-      and email = 'defined-mismatch-smoke@example.com'
-      and student_profile_id = v_mismatch_profile
-  ) then raise exception 'A mismatched roster name must not claim a preloaded participant row'; end if;
+    select 1 from public.student_profiles
+    where lower(trim(email)) = 'defined-mismatch-smoke@example.com'
+  ) then raise exception 'A mismatched roster identity created a central profile'; end if;
+
+  begin
+    perform public.register_student_profile(
+      null, 'Wrong', 'Name', 'defined-exact-smoke@example.com', 'College of Engineering'
+    );
+    raise exception 'An existing email accepted a different first and last name';
+  exception
+    when others then
+      if sqlerrm = 'An existing email accepted a different first and last name' then
+        raise;
+      end if;
+      if position('already registered under a different name' in sqlerrm) = 0 then
+        raise exception 'Unexpected existing-email error: %', sqlerrm;
+      end if;
+  end;
 
   select array_agg(id order by id) into v_activity_ids
   from (select id from public.activities where is_active = true limit 2) selected;
