@@ -432,3 +432,8 @@ body * {
 @media(max-width:650px){.spreadsheet-template-button{display:block;margin:10px 0 0}}
 @media(max-width:380px){.registration-name-row,.challenges-empty>div{grid-template-columns:1fr}.registration-welcome{padding-right:125px}.registration-welcome img{width:135px}.public-competition-card{grid-template-columns:1fr}.public-competition-card>.primary-button{width:100%}}
 @media(max-width:380px){.past-challenge-card{grid-template-columns:38px minmax(0,1fr) 16px}.past-challenge-result{display:none}.final-results-card{grid-template-columns:1fr}}
+
+/* Keep notifications compact and give users an immediate dismissal control. */
+.toast { max-width: min(420px, calc(100vw - 32px)); padding: 13px 14px; line-height: 1.4; }
+.toast span { min-width: 0; overflow-wrap: anywhere; }
+.toast button { flex: 0 0 auto; width: 24px; height: 24px; border: 0; border-radius: 50%; background: #ffffff18; color: #fff; font: 700 16px/1 Arial; cursor: pointer; }
