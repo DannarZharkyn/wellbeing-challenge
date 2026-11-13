@@ -454,7 +454,7 @@ body * {
 .team-choice-form label { display: block; color: #46534e; font-size: 12px; font-weight: 800; }
 .team-choice-form input { width: 100%; min-height: 48px; display: block; margin: 7px 0 14px; padding: 11px 13px; border: 1px solid #dfe5e1; border-radius: 10px; font-size: 14px; }
 .team-choice-form .primary-button { width: 100%; }
-.team-choice-wait-note { display: flex; align-items: center; gap: 9px; padding: 7px 10px 2px; color: #6b7772; font-size: 10px; line-height: 1.4; }
+.team-choice-wait-note { display: flex; align-items: center; gap: 9px; padding: 7px 10px 2px; color: #6b7772; font-size: 11px; line-height: 1.4; }
 .team-choice-wait-note svg { flex: 0 0 auto; color: #5f887a; }
 .student-team-code { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; margin-bottom: 8px; padding: 11px 12px; border-radius: 10px; background: #eef5f1; }
 .student-team-code span { color: #64716c; font-size: 9px; font-weight: 800; letter-spacing: .1em; }
