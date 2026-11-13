@@ -31,6 +31,14 @@ begin
   perform public.remove_student_team_member(v_profile_one,v_competition,v_participant_two);
   if exists(select 1 from public.team_memberships where team_id=v_team and participant_id=v_participant_two)
     then raise exception 'Removed member remained assigned'; end if;
+  perform public.remove_student_team_member(
+    v_profile_one,
+    v_competition,
+    (select p.id from public.participants p
+     where p.competition_id=v_competition and p.student_profile_id=v_profile_one)
+  );
+  if exists(select 1 from public.teams where id=v_team)
+    then raise exception 'Empty team remained in the database'; end if;
 end;
 $$;
 rollback;
