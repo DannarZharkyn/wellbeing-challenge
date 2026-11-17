@@ -4,9 +4,7 @@ import './admin-parity.css';
 import './ux-cleanup.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
-  ),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   title: 'Wellbeing Challenge',
   description: 'Small steps toward better wellbeing, together.',
   openGraph: {

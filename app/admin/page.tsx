@@ -7,362 +7,3206 @@ import { DimensionIcon, Icon, Logo } from '../ui';
 import { getSupabaseBrowserClient } from '../../lib/supabase/client';
 
 type AdminView = 'Main Panel' | 'Activity Library' | 'Templates';
-type AdminCompetition = {id:string;name:string;type:'Individual'|'Group';status:'Active'|'Scheduled'|'Ended';participants:number;activities:number;dates:string;description?:string;code?:string;startAt?:string;endAt?:string};
-const adminViewKey='wellbeing-admin-view';
-const adminCompetitionKey='wellbeing-admin-competition';
-function adminViewSlug(view:AdminView){return view==='Activity Library'?'activity-library':view==='Templates'?'templates':'main';}
-function adminUrl(view:AdminView,competitionId?:string,tab?:string){const params=new URLSearchParams();if(competitionId){params.set('competition',competitionId);if(tab)params.set('tab',tab.toLowerCase());}else if(view!=='Main Panel')params.set('view',adminViewSlug(view));const query=params.toString();return `/admin${query?`?${query}`:''}`;}
-function effectiveCompetitionStatus(start:string,end:string):AdminCompetition['status']{const now=Date.now();if(new Date(end).getTime()<=now)return 'Ended';if(new Date(start).getTime()<=now)return 'Active';return 'Scheduled';}
+type AdminCompetition = {
+  id: string;
+  name: string;
+  type: 'Individual' | 'Group';
+  status: 'Active' | 'Scheduled' | 'Ended';
+  participants: number;
+  activities: number;
+  dates: string;
+  description?: string;
+  code?: string;
+  startAt?: string;
+  endAt?: string;
+};
+const adminViewKey = 'wellbeing-admin-view';
+const adminCompetitionKey = 'wellbeing-admin-competition';
+function adminViewSlug(view: AdminView) {
+  return view === 'Activity Library'
+    ? 'activity-library'
+    : view === 'Templates'
+      ? 'templates'
+      : 'main';
+}
+function adminUrl(view: AdminView, competitionId?: string, tab?: string) {
+  const params = new URLSearchParams();
+  if (competitionId) {
+    params.set('competition', competitionId);
+    if (tab) params.set('tab', tab.toLowerCase());
+  } else if (view !== 'Main Panel') params.set('view', adminViewSlug(view));
+  const query = params.toString();
+  return `/admin${query ? `?${query}` : ''}`;
+}
+function effectiveCompetitionStatus(start: string, end: string): AdminCompetition['status'] {
+  const now = Date.now();
+  if (new Date(end).getTime() <= now) return 'Ended';
+  if (new Date(start).getTime() <= now) return 'Active';
+  return 'Scheduled';
+}
 
 export default function AdminDashboard() {
-  const supabase=getSupabaseBrowserClient();
-  const [authStatus,setAuthStatus]=useState<'loading'|'signed-out'|'signed-in'>(supabase?'loading':'signed-out');
-  const [view, setView] = useState<AdminView>(()=>{if(typeof window==='undefined')return 'Main Panel';const requested=new URLSearchParams(window.location.search).get('view');if(requested==='activity-library')return 'Activity Library';if(requested==='templates')return 'Templates';const saved=localStorage.getItem(adminViewKey) as AdminView|null;return saved&&['Main Panel','Activity Library','Templates'].includes(saved)?saved:'Main Panel';});
+  const supabase = getSupabaseBrowserClient();
+  const [authStatus, setAuthStatus] = useState<'loading' | 'signed-out' | 'signed-in'>(
+    supabase ? 'loading' : 'signed-out',
+  );
+  const [view, setView] = useState<AdminView>(() => {
+    if (typeof window === 'undefined') return 'Main Panel';
+    const requested = new URLSearchParams(window.location.search).get('view');
+    if (requested === 'activity-library') return 'Activity Library';
+    if (requested === 'templates') return 'Templates';
+    const saved = localStorage.getItem(adminViewKey) as AdminView | null;
+    return saved && ['Main Panel', 'Activity Library', 'Templates'].includes(saved)
+      ? saved
+      : 'Main Panel';
+  });
   const [createOpen, setCreateOpen] = useState(false);
   const [selected, setSelected] = useState<AdminCompetition | null>(null);
-  const [competitions,setCompetitions]=useState<AdminCompetition[]>([]);
-  const [competitionsLoading,setCompetitionsLoading]=useState(true);
+  const [competitions, setCompetitions] = useState<AdminCompetition[]>([]);
+  const [competitionsLoading, setCompetitionsLoading] = useState(true);
   const [toast, setToast] = useState('');
-  const notify = useCallback((message: string) => { setToast(message); window.setTimeout(() => setToast(''), 2400); }, []);
-  useEffect(()=>{
-    if(!supabase)return;
-    supabase.auth.getSession().then(({data})=>setAuthStatus(data.session?'signed-in':'signed-out'));
-    const {data}=supabase.auth.onAuthStateChange((_event,session)=>setAuthStatus(session?'signed-in':'signed-out'));
-    return ()=>data.subscription.unsubscribe();
-  },[supabase]);
-  useEffect(()=>{
-    if(authStatus!=='signed-in'||!supabase)return;
-    supabase.from('competitions').select('id,name,competition_type,status,start_at,end_at,description,competition_code,event_activities(count),participants(count)').order('created_at').then(({data})=>{
-      if(data){const loaded=data.map(row=>({id:row.id,name:row.name,type:row.competition_type==='group'?'Group' as const:'Individual' as const,status:effectiveCompetitionStatus(row.start_at,row.end_at),participants:row.participants?.[0]?.count??0,activities:row.event_activities?.[0]?.count??0,dates:formatCompetitionDates(row.start_at,row.end_at),description:row.description,code:row.competition_code,startAt:row.start_at,endAt:row.end_at}));setCompetitions(loaded);const params=new URLSearchParams(window.location.search);const urlView=params.get('view');const resolvedView:AdminView=urlView==='activity-library'?'Activity Library':urlView==='templates'?'Templates':(localStorage.getItem(adminViewKey) as AdminView|null)??'Main Panel';if(['Main Panel','Activity Library','Templates'].includes(resolvedView))setView(resolvedView);const requestedCompetition=params.get('competition')??localStorage.getItem(adminCompetitionKey);if(requestedCompetition)setSelected(loaded.find(item=>item.id===requestedCompetition)??null);}
-      setCompetitionsLoading(false);
-    });
-  },[authStatus,supabase]);
-  useEffect(()=>{if(authStatus==='signed-in'&&!competitionsLoading)localStorage.setItem(adminViewKey,view);},[authStatus,competitionsLoading,view]);
-  useEffect(()=>{if(authStatus==='signed-in'&&selected)localStorage.setItem(adminCompetitionKey,selected.id);},[authStatus,selected]);
-  if(authStatus==='loading')return <AdminAuthShell><p className="admin-auth-status">Checking administrator access…</p></AdminAuthShell>;
-  if(authStatus==='signed-out')return <AdminLogin/>;
-  return <main className="admin-app">
-    <aside className="admin-sidebar"><Logo/><nav>{([['Main Panel','grid'],['Activity Library','target'],['Templates','book']] as const).map(([label,icon]) => <button key={label} className={view===label?'active':''} onClick={() => {setView(label);setSelected(null);localStorage.removeItem(adminCompetitionKey);window.history.pushState({},'',adminUrl(label));}}><Icon name={icon}/>{label}</button>)}</nav><div className="admin-sidebar-footer"><Link href="/">← Student experience</Link><div><span>PF</span><p><strong>Pedro Falci</strong><small>Administrator</small></p></div><button className="admin-sign-out" onClick={()=>supabase?.auth.signOut()}>Sign out</button></div></aside>
-    <section className="admin-main"><header className="admin-topbar"><div><span>Student Wellbeing workspace</span><strong>{selected?.name ?? view}</strong></div><div><button className="icon-button"><Icon name="search"/></button><button className="avatar-button">PF</button></div></header>
-      <div className="admin-content">{selected ? <AdminCompetitionDetail competition={selected} onBack={() => {setSelected(null);localStorage.removeItem(adminCompetitionKey);window.history.pushState({},'',adminUrl('Main Panel'));}} notify={notify} onUpdate={updated=>{setSelected(updated);setCompetitions(current=>current.map(item=>item.id===updated.id?updated:item));}}/> : <>
-        {view==='Main Panel'&&<Overview competitions={competitions} loading={competitionsLoading} onCreate={()=>setCreateOpen(true)} onOpen={item=>{setSelected(item);window.history.pushState({},'',adminUrl('Main Panel',item.id));}} onDelete={deleteCompetition}/>}
-        {view==='Activity Library'&&<ActivityLibrary notify={notify}/>} 
-        {view==='Templates'&&<Templates/>}
-      </>}</div>
-    </section>
-    {createOpen&&<CreateCompetition onClose={()=>setCreateOpen(false)} onCreated={(competition)=>{setCreateOpen(false);setCompetitions(current=>[...current,competition]);setSelected(competition);window.history.pushState({},'',adminUrl('Main Panel',competition.id));notify('Competition created');}}/>}
-    {toast&&<div className="toast"><Icon name="check"/>{toast}</div>}
-  </main>;
+  const notify = useCallback((message: string) => {
+    setToast(message);
+    window.setTimeout(() => setToast(''), 2400);
+  }, []);
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setAuthStatus(data.session ? 'signed-in' : 'signed-out'));
+    const { data } = supabase.auth.onAuthStateChange((_event, session) =>
+      setAuthStatus(session ? 'signed-in' : 'signed-out'),
+    );
+    return () => data.subscription.unsubscribe();
+  }, [supabase]);
+  useEffect(() => {
+    if (authStatus !== 'signed-in' || !supabase) return;
+    supabase
+      .from('competitions')
+      .select(
+        'id,name,competition_type,status,start_at,end_at,description,competition_code,event_activities(count),participants(count)',
+      )
+      .order('created_at')
+      .then(({ data }) => {
+        if (data) {
+          const loaded = data.map((row) => ({
+            id: row.id,
+            name: row.name,
+            type: row.competition_type === 'group' ? ('Group' as const) : ('Individual' as const),
+            status: effectiveCompetitionStatus(row.start_at, row.end_at),
+            participants: row.participants?.[0]?.count ?? 0,
+            activities: row.event_activities?.[0]?.count ?? 0,
+            dates: formatCompetitionDates(row.start_at, row.end_at),
+            description: row.description,
+            code: row.competition_code,
+            startAt: row.start_at,
+            endAt: row.end_at,
+          }));
+          setCompetitions(loaded);
+          const params = new URLSearchParams(window.location.search);
+          const urlView = params.get('view');
+          const resolvedView: AdminView =
+            urlView === 'activity-library'
+              ? 'Activity Library'
+              : urlView === 'templates'
+                ? 'Templates'
+                : ((localStorage.getItem(adminViewKey) as AdminView | null) ?? 'Main Panel');
+          if (['Main Panel', 'Activity Library', 'Templates'].includes(resolvedView))
+            setView(resolvedView);
+          const requestedCompetition =
+            params.get('competition') ?? localStorage.getItem(adminCompetitionKey);
+          if (requestedCompetition)
+            setSelected(loaded.find((item) => item.id === requestedCompetition) ?? null);
+        }
+        setCompetitionsLoading(false);
+      });
+  }, [authStatus, supabase]);
+  useEffect(() => {
+    if (authStatus === 'signed-in' && !competitionsLoading)
+      localStorage.setItem(adminViewKey, view);
+  }, [authStatus, competitionsLoading, view]);
+  useEffect(() => {
+    if (authStatus === 'signed-in' && selected)
+      localStorage.setItem(adminCompetitionKey, selected.id);
+  }, [authStatus, selected]);
+  if (authStatus === 'loading')
+    return (
+      <AdminAuthShell>
+        <p className="admin-auth-status">Checking administrator access…</p>
+      </AdminAuthShell>
+    );
+  if (authStatus === 'signed-out') return <AdminLogin />;
+  return (
+    <main className="admin-app">
+      <aside className="admin-sidebar">
+        <Logo />
+        <nav>
+          {(
+            [
+              ['Main Panel', 'grid'],
+              ['Activity Library', 'target'],
+              ['Templates', 'book'],
+            ] as const
+          ).map(([label, icon]) => (
+            <button
+              key={label}
+              className={view === label ? 'active' : ''}
+              onClick={() => {
+                setView(label);
+                setSelected(null);
+                localStorage.removeItem(adminCompetitionKey);
+                window.history.pushState({}, '', adminUrl(label));
+              }}
+            >
+              <Icon name={icon} />
+              {label}
+            </button>
+          ))}
+        </nav>
+        <div className="admin-sidebar-footer">
+          <Link href="/">← Student experience</Link>
+          <div>
+            <span>PF</span>
+            <p>
+              <strong>Pedro Falci</strong>
+              <small>Administrator</small>
+            </p>
+          </div>
+          <button className="admin-sign-out" onClick={() => supabase?.auth.signOut()}>
+            Sign out
+          </button>
+        </div>
+      </aside>
+      <section className="admin-main">
+        <header className="admin-topbar">
+          <div>
+            <span>Student Wellbeing workspace</span>
+            <strong>{selected?.name ?? view}</strong>
+          </div>
+          <div>
+            <button className="icon-button">
+              <Icon name="search" />
+            </button>
+            <button className="avatar-button">PF</button>
+          </div>
+        </header>
+        <div className="admin-content">
+          {selected ? (
+            <AdminCompetitionDetail
+              competition={selected}
+              onBack={() => {
+                setSelected(null);
+                localStorage.removeItem(adminCompetitionKey);
+                window.history.pushState({}, '', adminUrl('Main Panel'));
+              }}
+              notify={notify}
+              onUpdate={(updated) => {
+                setSelected(updated);
+                setCompetitions((current) =>
+                  current.map((item) => (item.id === updated.id ? updated : item)),
+                );
+              }}
+            />
+          ) : (
+            <>
+              {view === 'Main Panel' && (
+                <Overview
+                  competitions={competitions}
+                  loading={competitionsLoading}
+                  onCreate={() => setCreateOpen(true)}
+                  onOpen={(item) => {
+                    setSelected(item);
+                    window.history.pushState({}, '', adminUrl('Main Panel', item.id));
+                  }}
+                  onDelete={deleteCompetition}
+                />
+              )}
+              {view === 'Activity Library' && <ActivityLibrary notify={notify} />}
+              {view === 'Templates' && <Templates />}
+            </>
+          )}
+        </div>
+      </section>
+      {createOpen && (
+        <CreateCompetition
+          onClose={() => setCreateOpen(false)}
+          onCreated={(competition) => {
+            setCreateOpen(false);
+            setCompetitions((current) => [...current, competition]);
+            setSelected(competition);
+            window.history.pushState({}, '', adminUrl('Main Panel', competition.id));
+            notify('Competition created');
+          }}
+        />
+      )}
+      {toast && (
+        <div className="toast">
+          <Icon name="check" />
+          {toast}
+        </div>
+      )}
+    </main>
+  );
 
-  async function deleteCompetition(competition:AdminCompetition){
-    if(!window.confirm(`Permanently delete “${competition.name}” and all of its related data?`))return;
-    const client=getSupabaseBrowserClient();
-    if(client&&!competition.id.startsWith('mock-')){const {error}=await client.rpc('delete_competition',{competition_id:competition.id});if(error){notify(`Could not delete competition: ${error.message}`);return;}}
-    setCompetitions(current=>current.filter(item=>item.id!==competition.id));if(selected?.id===competition.id)setSelected(null);notify('Competition permanently deleted');
+  async function deleteCompetition(competition: AdminCompetition) {
+    if (!window.confirm(`Permanently delete “${competition.name}” and all of its related data?`))
+      return;
+    const client = getSupabaseBrowserClient();
+    if (client && !competition.id.startsWith('mock-')) {
+      const { error } = await client.rpc('delete_competition', { competition_id: competition.id });
+      if (error) {
+        notify(`Could not delete competition: ${error.message}`);
+        return;
+      }
+    }
+    setCompetitions((current) => current.filter((item) => item.id !== competition.id));
+    if (selected?.id === competition.id) setSelected(null);
+    notify('Competition permanently deleted');
   }
 }
 
-function formatCompetitionDates(start:string,end:string){const options:Intl.DateTimeFormatOptions={month:'short',day:'numeric'};return `${new Date(start).toLocaleDateString('en-US',options)} – ${new Date(end).toLocaleDateString('en-US',options)}`}
-
-function AdminAuthShell({children}:{children:React.ReactNode}){return <main className="admin-auth-page"><section className="admin-auth-card"><Logo/>{children}<Link href="/">← Return to student experience</Link></section></main>}
-
-function AdminLogin(){
-  const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [error,setError]=useState(''); const [submitting,setSubmitting]=useState(false);
-  async function submit(event:React.FormEvent){event.preventDefault();const client=getSupabaseBrowserClient();if(!client){setError('Supabase is not configured.');return;}setSubmitting(true);setError('');const {error:loginError}=await client.auth.signInWithPassword({email,password});if(loginError){setError('Email or password is incorrect.');setSubmitting(false);}}
-  return <AdminAuthShell><div className="admin-auth-heading"><span>ADMINISTRATOR ACCESS</span><h1>Sign in</h1><p>Use your approved Student Wellbeing administrator account.</p></div><form className="admin-login-form" onSubmit={submit}><label>Email address<input type="email" value={email} onChange={event=>setEmail(event.target.value)} autoComplete="username" required/></label><label>Password<input type="password" value={password} onChange={event=>setPassword(event.target.value)} autoComplete="current-password" required/></label>{error&&<p className="admin-login-error">{error}</p>}<button className="primary-button" disabled={submitting}>{submitting?'Signing in…':'Sign in'}</button></form></AdminAuthShell>
+function formatCompetitionDates(start: string, end: string) {
+  const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+  return `${new Date(start).toLocaleDateString('en-US', options)} – ${new Date(end).toLocaleDateString('en-US', options)}`;
 }
 
-function Overview({competitions,loading,onCreate,onOpen,onDelete}:{competitions:AdminCompetition[];loading:boolean;onCreate:()=>void;onOpen:(item:AdminCompetition)=>void;onDelete:(item:AdminCompetition)=>void}) {
-  return <><AdminHeading eyebrow="" title="Main Panel"/><button className="admin-create-callout" onClick={onCreate}><span><strong>Create New Competition</strong><small>Set the competition basics and choose activities.</small></span><Icon name="plus" size={34}/></button><div className="list-heading"><h2>Existing Competitions</h2><span>{loading?'Loading…':`${competitions.length} competitions`}</span></div>{loading?<div className="competition-loading">Loading competitions…</div>:<div className="admin-competition-cards">{competitions.map(item=><article key={item.id}><button className="competition-card-open" onClick={()=>onOpen(item)}><div><span className={`large-status ${item.status.toLowerCase()}`}>{item.status}</span><Icon name="chevron"/></div><h2>{item.name}</h2><p>{item.type} competition · Code {item.code??'—'}</p><footer>{item.dates}</footer></button><button className="competition-delete" aria-label={`Delete ${item.name}`} onClick={()=>onDelete(item)}><Icon name="trash" size={18}/></button></article>)}</div>}</>;
+function AdminAuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <main className="admin-auth-page">
+      <section className="admin-auth-card">
+        <Logo />
+        {children}
+        <Link href="/">← Return to student experience</Link>
+      </section>
+    </main>
+  );
 }
 
-const defaultRules=`Competition rules:
+function AdminLogin() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      setError('Supabase is not configured.');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    const { error: loginError } = await client.auth.signInWithPassword({ email, password });
+    if (loginError) {
+      setError('Email or password is incorrect.');
+      setSubmitting(false);
+    }
+  }
+  return (
+    <AdminAuthShell>
+      <div className="admin-auth-heading">
+        <span>ADMINISTRATOR ACCESS</span>
+        <h1>Sign in</h1>
+        <p>Use your approved Student Wellbeing administrator account.</p>
+      </div>
+      <form className="admin-login-form" onSubmit={submit}>
+        <label>
+          Email address
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            autoComplete="username"
+            required
+          />
+        </label>
+        <label>
+          Password
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
+            required
+          />
+        </label>
+        {error && <p className="admin-login-error">{error}</p>}
+        <button className="primary-button" disabled={submitting}>
+          {submitting ? 'Signing in…' : 'Sign in'}
+        </button>
+      </form>
+    </AdminAuthShell>
+  );
+}
+
+function Overview({
+  competitions,
+  loading,
+  onCreate,
+  onOpen,
+  onDelete,
+}: {
+  competitions: AdminCompetition[];
+  loading: boolean;
+  onCreate: () => void;
+  onOpen: (item: AdminCompetition) => void;
+  onDelete: (item: AdminCompetition) => void;
+}) {
+  return (
+    <>
+      <AdminHeading eyebrow="" title="Main Panel" />
+      <button className="admin-create-callout" onClick={onCreate}>
+        <span>
+          <strong>Create New Competition</strong>
+          <small>Set the competition basics and choose activities.</small>
+        </span>
+        <Icon name="plus" size={34} />
+      </button>
+      <div className="list-heading">
+        <h2>Existing Competitions</h2>
+        <span>{loading ? 'Loading…' : `${competitions.length} competitions`}</span>
+      </div>
+      {loading ? (
+        <div className="competition-loading">Loading competitions…</div>
+      ) : (
+        <div className="admin-competition-cards">
+          {competitions.map((item) => (
+            <article key={item.id}>
+              <button className="competition-card-open" onClick={() => onOpen(item)}>
+                <div>
+                  <span className={`large-status ${item.status.toLowerCase()}`}>{item.status}</span>
+                  <Icon name="chevron" />
+                </div>
+                <h2>{item.name}</h2>
+                <p>
+                  {item.type} competition · Code {item.code ?? '—'}
+                </p>
+                <footer>{item.dates}</footer>
+              </button>
+              <button
+                className="competition-delete"
+                aria-label={`Delete ${item.name}`}
+                onClick={() => onDelete(item)}
+              >
+                <Icon name="trash" size={18} />
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+const defaultRules = `Competition rules:
 
 1. Complete activities honestly and only during the competition period.
 2. Respect other participants, Boston University property, and all University policies.
 3. Never complete an activity in a private, restricted, or unsafe area.
 4. Group members may complete assigned activities together unless an activity says otherwise.
 5. Points and leaderboard positions are part of a friendly wellbeing challenge. Administrators may review unusual activity before confirming results.`;
-const defaultDisclaimer=`Wellbeing Challenge — Participation Acknowledgment
+const defaultDisclaimer = `Wellbeing Challenge — Participation Acknowledgment
 
 Participation is voluntary. Activities are intended to encourage healthy routines and community connection; they do not replace medical, mental health, nutritional, or financial advice.
 
 Participants are responsible for making safe choices, considering their individual needs and abilities, and stopping any activity that causes pain, distress, or discomfort. No activity requires entering a restricted area, sharing private information, or taking an unreasonable risk.
 
 Competition participation, activity completions, team membership, and points may be stored and reviewed to administer the challenge. Final wording should be reviewed by the sponsoring Boston University office before publication.`;
-const defaultInvitation=`You are invited to join a Boston University Wellbeing Challenge.
+const defaultInvitation = `You are invited to join a Boston University Wellbeing Challenge.
 
 Open the competition link or scan the QR code, review the participant rules and disclaimer, and then join as an individual or through your assigned team invitation. Complete activities, earn points, and follow your progress throughout the competition.`;
 
-type TemplateKey='participant_rules'|'participant_disclaimer'|'invitation_message';
-type PlatformTemplates=Record<TemplateKey,string>;
-const fallbackTemplates:PlatformTemplates={participant_rules:defaultRules,participant_disclaimer:defaultDisclaimer,invitation_message:defaultInvitation};
+type TemplateKey = 'participant_rules' | 'participant_disclaimer' | 'invitation_message';
+type PlatformTemplates = Record<TemplateKey, string>;
+const fallbackTemplates: PlatformTemplates = {
+  participant_rules: defaultRules,
+  participant_disclaimer: defaultDisclaimer,
+  invitation_message: defaultInvitation,
+};
 
-async function loadPlatformTemplates():Promise<PlatformTemplates>{
-  const client=getSupabaseBrowserClient();
-  if(!client)return fallbackTemplates;
-  const {data,error}=await client.from('platform_templates').select('template_key,content');
-  if(error)throw error;
-  return (data??[]).reduce((result,row)=>({...result,[row.template_key]:row.content}),{...fallbackTemplates}) as PlatformTemplates;
+async function loadPlatformTemplates(): Promise<PlatformTemplates> {
+  const client = getSupabaseBrowserClient();
+  if (!client) return fallbackTemplates;
+  const { data, error } = await client.from('platform_templates').select('template_key,content');
+  if (error) throw error;
+  return (data ?? []).reduce((result, row) => ({ ...result, [row.template_key]: row.content }), {
+    ...fallbackTemplates,
+  }) as PlatformTemplates;
 }
 
 function Templates() {
   /* DESIGN DECISION: Platform defaults are copied into future competitions, then organizers may customize each competition independently. */
   /* TODO(PRODUCTION): Add template version history and an approval workflow if multiple administrators will edit policy language. */
-  const [templates,setTemplates]=useState<PlatformTemplates|null>(null);const [error,setError]=useState('');
-  useEffect(()=>{loadPlatformTemplates().then(setTemplates).catch(loadError=>setError(loadError instanceof Error?loadError.message:'Could not load templates.'));},[]);
-  return <><AdminHeading eyebrow="TEMPLATES" title="Default Templates" text="Manage the platform text copied into newly created wellbeing competitions."/><section className="template-hero"><span>PLATFORM DEFAULTS</span><h2>Templates for future competitions</h2><p>When a new competition is started, the current templates are copied into it. The organizer may then customize that competition independently.</p></section><section className="template-warning"><strong>⚠ Changes apply only to future competitions</strong><p>Existing competitions keep the text saved when they were created. Editing an individual competition will not change these platform defaults.</p></section>{error&&<p className="competition-form-error">Could not load templates: {error}</p>}{!templates?<div className="competition-loading">Loading templates…</div>:<div className="default-template-list"><EditableTemplate templateKey="participant_rules" title="Participant Rules" description="Default participant rules copied into every newly created competition." value={templates.participant_rules} onSaved={content=>setTemplates(current=>current?{...current,participant_rules:content}:current)}/><EditableTemplate templateKey="participant_disclaimer" title="Participant Disclaimer" description="Default acknowledgment students must accept before joining." value={templates.participant_disclaimer} onSaved={content=>setTemplates(current=>current?{...current,participant_disclaimer:content}:current)}/><EditableTemplate templateKey="invitation_message" title="Invitation Message" description="Default guidance shown beside invitation links and QR codes." value={templates.invitation_message} onSaved={content=>setTemplates(current=>current?{...current,invitation_message:content}:current)}/></div>}</>;
+  const [templates, setTemplates] = useState<PlatformTemplates | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    loadPlatformTemplates()
+      .then(setTemplates)
+      .catch((loadError) =>
+        setError(loadError instanceof Error ? loadError.message : 'Could not load templates.'),
+      );
+  }, []);
+  return (
+    <>
+      <AdminHeading
+        eyebrow="TEMPLATES"
+        title="Default Templates"
+        text="Manage the platform text copied into newly created wellbeing competitions."
+      />
+      <section className="template-hero">
+        <span>PLATFORM DEFAULTS</span>
+        <h2>Templates for future competitions</h2>
+        <p>
+          When a new competition is started, the current templates are copied into it. The organizer
+          may then customize that competition independently.
+        </p>
+      </section>
+      <section className="template-warning">
+        <strong>⚠ Changes apply only to future competitions</strong>
+        <p>
+          Existing competitions keep the text saved when they were created. Editing an individual
+          competition will not change these platform defaults.
+        </p>
+      </section>
+      {error && <p className="competition-form-error">Could not load templates: {error}</p>}
+      {!templates ? (
+        <div className="competition-loading">Loading templates…</div>
+      ) : (
+        <div className="default-template-list">
+          <EditableTemplate
+            templateKey="participant_rules"
+            title="Participant Rules"
+            description="Default participant rules copied into every newly created competition."
+            value={templates.participant_rules}
+            onSaved={(content) =>
+              setTemplates((current) =>
+                current ? { ...current, participant_rules: content } : current,
+              )
+            }
+          />
+          <EditableTemplate
+            templateKey="participant_disclaimer"
+            title="Participant Disclaimer"
+            description="Default acknowledgment students must accept before joining."
+            value={templates.participant_disclaimer}
+            onSaved={(content) =>
+              setTemplates((current) =>
+                current ? { ...current, participant_disclaimer: content } : current,
+              )
+            }
+          />
+          <EditableTemplate
+            templateKey="invitation_message"
+            title="Invitation Message"
+            description="Default guidance shown beside invitation links and QR codes."
+            value={templates.invitation_message}
+            onSaved={(content) =>
+              setTemplates((current) =>
+                current ? { ...current, invitation_message: content } : current,
+              )
+            }
+          />
+        </div>
+      )}
+    </>
+  );
 }
 
-function EditableTemplate({templateKey,title,description,value,onSaved}:{templateKey:TemplateKey;title:string;description:string;value:string;onSaved:(content:string)=>void}) {
-  const [draft,setDraft]=useState(value); const [editing,setEditing]=useState(false); const [saved,setSaved]=useState(false);const [saving,setSaving]=useState(false);const [error,setError]=useState('');
-  async function save(){const content=draft.trim();if(!content){setError('Template text cannot be empty.');return;}const client=getSupabaseBrowserClient();if(!client){setError('Supabase is not configured.');return;}setSaving(true);setError('');const {error:saveError}=await client.from('platform_templates').update({content,updated_at:new Date().toISOString()}).eq('template_key',templateKey);setSaving(false);if(saveError){setError(saveError.message);return;}onSaved(content);setEditing(false);setSaved(true);window.setTimeout(()=>setSaved(false),2000);}
-  return <section className="default-template-card"><header><div><Icon name="book"/><span><h3>{title}</h3><p>{description}</p></span></div>{editing?<div><button className="secondary-button" disabled={saving} onClick={()=>{setDraft(value);setError('');setEditing(false)}}>Cancel</button><button className="primary-button" disabled={saving} onClick={save}>{saving?'Saving…':'Save Template'}</button></div>:<button className="secondary-button" onClick={()=>{setDraft(value);setEditing(true)}}>Edit</button>}</header>{editing?<textarea value={draft} onChange={event=>setDraft(event.target.value)}/>:<div className="template-copy">{value}</div>}{error&&<p className="competition-form-error">Could not save template: {error}</p>}{saved&&<span className="template-saved"><Icon name="check" size={15}/>Saved for future competitions</span>}</section>;
+function EditableTemplate({
+  templateKey,
+  title,
+  description,
+  value,
+  onSaved,
+}: {
+  templateKey: TemplateKey;
+  title: string;
+  description: string;
+  value: string;
+  onSaved: (content: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  async function save() {
+    const content = draft.trim();
+    if (!content) {
+      setError('Template text cannot be empty.');
+      return;
+    }
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      setError('Supabase is not configured.');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    const { error: saveError } = await client
+      .from('platform_templates')
+      .update({ content, updated_at: new Date().toISOString() })
+      .eq('template_key', templateKey);
+    setSaving(false);
+    if (saveError) {
+      setError(saveError.message);
+      return;
+    }
+    onSaved(content);
+    setEditing(false);
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 2000);
+  }
+  return (
+    <section className="default-template-card">
+      <header>
+        <div>
+          <Icon name="book" />
+          <span>
+            <h3>{title}</h3>
+            <p>{description}</p>
+          </span>
+        </div>
+        {editing ? (
+          <div>
+            <button
+              className="secondary-button"
+              disabled={saving}
+              onClick={() => {
+                setDraft(value);
+                setError('');
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </button>
+            <button className="primary-button" disabled={saving} onClick={save}>
+              {saving ? 'Saving…' : 'Save Template'}
+            </button>
+          </div>
+        ) : (
+          <button
+            className="secondary-button"
+            onClick={() => {
+              setDraft(value);
+              setEditing(true);
+            }}
+          >
+            Edit
+          </button>
+        )}
+      </header>
+      {editing ? (
+        <textarea value={draft} onChange={(event) => setDraft(event.target.value)} />
+      ) : (
+        <div className="template-copy">{value}</div>
+      )}
+      {error && <p className="competition-form-error">Could not save template: {error}</p>}
+      {saved && (
+        <span className="template-saved">
+          <Icon name="check" size={15} />
+          Saved for future competitions
+        </span>
+      )}
+    </section>
+  );
 }
 
-function AdminCompetitionDetail({competition,onBack,notify,onUpdate}:{competition:AdminCompetition;onBack:()=>void;notify:(m:string)=>void;onUpdate:(competition:AdminCompetition)=>void}) {
-  type DetailTab='Overview'|'Participants'|'Teams'|'Activities'|'Leaderboard';
-  const detailKey=`wellbeing-admin-detail-${competition.id}`;
-  const [tab,setTab]=useState<DetailTab>('Overview');
-  const [editOpen,setEditOpen]=useState(false);
-  const [activityRevision,setActivityRevision]=useState(0);
-  const tabs=(competition.type==='Group'?['Overview','Activities','Teams','Participants','Leaderboard']:['Overview','Activities','Participants','Leaderboard']) as DetailTab[];
+function AdminCompetitionDetail({
+  competition,
+  onBack,
+  notify,
+  onUpdate,
+}: {
+  competition: AdminCompetition;
+  onBack: () => void;
+  notify: (m: string) => void;
+  onUpdate: (competition: AdminCompetition) => void;
+}) {
+  type DetailTab = 'Overview' | 'Participants' | 'Teams' | 'Activities' | 'Leaderboard';
+  const detailKey = `wellbeing-admin-detail-${competition.id}`;
+  const [tab, setTab] = useState<DetailTab>('Overview');
+  const [editOpen, setEditOpen] = useState(false);
+  const [activityRevision, setActivityRevision] = useState(0);
+  const tabs = (
+    competition.type === 'Group'
+      ? ['Overview', 'Activities', 'Teams', 'Participants', 'Leaderboard']
+      : ['Overview', 'Activities', 'Participants', 'Leaderboard']
+  ) as DetailTab[];
   // Restore the last open management tab after hydration so refresh keeps the organizer in context.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(()=>{const params=new URLSearchParams(window.location.search);const requested=params.get('tab');const fromUrl=requested?`${requested[0]?.toUpperCase()}${requested.slice(1)}` as DetailTab:null;const saved=fromUrl??localStorage.getItem(detailKey) as DetailTab|null;const allowed:DetailTab[]=competition.type==='Group'?['Overview','Activities','Teams','Participants','Leaderboard']:['Overview','Activities','Participants','Leaderboard'];if(saved&&allowed.includes(saved))setTab(saved);},[detailKey,competition.type]);
-  useEffect(()=>{localStorage.setItem(detailKey,tab);},[detailKey,tab]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get('tab');
+    const fromUrl = requested
+      ? (`${requested[0]?.toUpperCase()}${requested.slice(1)}` as DetailTab)
+      : null;
+    const saved = fromUrl ?? (localStorage.getItem(detailKey) as DetailTab | null);
+    const allowed: DetailTab[] =
+      competition.type === 'Group'
+        ? ['Overview', 'Activities', 'Teams', 'Participants', 'Leaderboard']
+        : ['Overview', 'Activities', 'Participants', 'Leaderboard'];
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (saved && allowed.includes(saved)) setTab(saved);
+  }, [detailKey, competition.type]);
+  useEffect(() => {
+    localStorage.setItem(detailKey, tab);
+  }, [detailKey, tab]);
   /* DESIGN DECISION: Competition setup stops after Basics and Activities; operational work such as team creation belongs on this management page, matching Terrier Pursuit's event-first workflow. */
   /* PROTOTYPE: The current management screen is remembered in localStorage; team records and memberships themselves are persisted in Supabase. */
   /* TODO(PRODUCTION): Load the competition and permission-scoped tabs from the backend, persist edits, and enforce that individual competitions cannot create teams. */
-  function changeTab(next:DetailTab){setTab(next);window.history.pushState({},'',adminUrl('Main Panel',competition.id,next));}
-  return <><button className="admin-back" onClick={onBack}>← Back to Main Panel</button><div className="admin-detail-heading"><div><span className={`large-status ${competition.status.toLowerCase()}`}>{competition.status}</span><h1>{competition.name}</h1><p>{competition.type} competition · {competition.dates}</p>{competition.code&&<div className="visible-game-code"><span>COMPETITION CODE</span><strong>{competition.code}</strong></div>}</div><button className="secondary-button" onClick={()=>setEditOpen(true)}>Edit competition</button></div><div className="detail-tabs">{tabs.map(item=><button key={item} className={tab===item?'active':''} onClick={()=>changeTab(item)}>{competition.type==='Group'&&item==='Teams'?'Team Assignment':competition.type==='Group'&&item==='Participants'?'Participants & Teams':item}</button>)}</div>{tab==='Overview'&&<CompetitionOverview competition={competition} onTeams={()=>changeTab('Teams')} onEdit={()=>setEditOpen(true)}/>} {tab==='Activities'&&<AssignedActivities competitionId={competition.id} refreshKey={activityRevision} notify={notify} onRemoved={()=>onUpdate({...competition,activities:Math.max(0,competition.activities-1)})}/>} {tab==='Teams'&&competition.type==='Group'&&<TeamManager competitionId={competition.id} notify={notify}/>} {tab==='Participants'&&<CompetitionParticipants competitionId={competition.id} grouped={competition.type==='Group'}/>} {tab==='Leaderboard'&&<AdminLeaderboard competitionId={competition.id} type={competition.type}/>} {editOpen&&<EditCompetition competition={competition} onClose={()=>setEditOpen(false)} onSaved={updated=>{onUpdate(updated);setActivityRevision(value=>value+1);setEditOpen(false);notify('Competition updated');}}/>}</>;
+  function changeTab(next: DetailTab) {
+    setTab(next);
+    window.history.pushState({}, '', adminUrl('Main Panel', competition.id, next));
+  }
+  return (
+    <>
+      <button className="admin-back" onClick={onBack}>
+        ← Back to Main Panel
+      </button>
+      <div className="admin-detail-heading">
+        <div>
+          <span className={`large-status ${competition.status.toLowerCase()}`}>
+            {competition.status}
+          </span>
+          <h1>{competition.name}</h1>
+          <p>
+            {competition.type} competition · {competition.dates}
+          </p>
+          {competition.code && (
+            <div className="visible-game-code">
+              <span>COMPETITION CODE</span>
+              <strong>{competition.code}</strong>
+            </div>
+          )}
+        </div>
+        <button className="secondary-button" onClick={() => setEditOpen(true)}>
+          Edit competition
+        </button>
+      </div>
+      <div className="detail-tabs">
+        {tabs.map((item) => (
+          <button
+            key={item}
+            className={tab === item ? 'active' : ''}
+            onClick={() => changeTab(item)}
+          >
+            {competition.type === 'Group' && item === 'Teams'
+              ? 'Team Assignment'
+              : competition.type === 'Group' && item === 'Participants'
+                ? 'Participants & Teams'
+                : item}
+          </button>
+        ))}
+      </div>
+      {tab === 'Overview' && (
+        <CompetitionOverview
+          competition={competition}
+          onTeams={() => changeTab('Teams')}
+          onEdit={() => setEditOpen(true)}
+        />
+      )}{' '}
+      {tab === 'Activities' && (
+        <AssignedActivities
+          competitionId={competition.id}
+          refreshKey={activityRevision}
+          notify={notify}
+          onRemoved={() =>
+            onUpdate({ ...competition, activities: Math.max(0, competition.activities - 1) })
+          }
+        />
+      )}{' '}
+      {tab === 'Teams' && competition.type === 'Group' && (
+        <TeamManager competitionId={competition.id} notify={notify} />
+      )}{' '}
+      {tab === 'Participants' && (
+        <CompetitionParticipants
+          competitionId={competition.id}
+          grouped={competition.type === 'Group'}
+        />
+      )}{' '}
+      {tab === 'Leaderboard' && (
+        <AdminLeaderboard competitionId={competition.id} type={competition.type} />
+      )}{' '}
+      {editOpen && (
+        <EditCompetition
+          competition={competition}
+          onClose={() => setEditOpen(false)}
+          onSaved={(updated) => {
+            onUpdate(updated);
+            setActivityRevision((value) => value + 1);
+            setEditOpen(false);
+            notify('Competition updated');
+          }}
+        />
+      )}
+    </>
+  );
 }
 
-function CompetitionOverview({competition,onTeams,onEdit}:{competition:AdminCompetition;onTeams:()=>void;onEdit:()=>void}) {
-  return <><div className="event-metrics"><article><Icon name="users"/><strong>{competition.participants}</strong><span>Registered Students</span></article><article><Icon name="trophy"/><strong>{competition.type==='Group'?'3':'—'}</strong><span>Teams</span></article><button onClick={competition.type==='Group'?onTeams:undefined}><Icon name="user"/><strong>{competition.type==='Group'?'7':'0'}</strong><span>Unassigned Students</span>{competition.type==='Group'&&<b>View list</b>}</button><button><Icon name="clock"/><strong>104</strong><span>Completed Activities</span><b>View activity</b></button></div><section className="event-band"><div><small>COMPETITION TYPE</small><strong>{competition.type}</strong></div><div><small>COMPETITION DATES</small><strong>{competition.dates}</strong></div><div><small>ACTIVITIES</small><strong>{competition.activities} assigned</strong></div><button onClick={onEdit}>Edit Competition</button></section><div className="event-accordions"><details><summary><Icon name="qr"/>Participant QR Code <span>⌄</span></summary><p>Students scan this competition code to open registration. Team invitations remain team-specific.</p></details><details><summary><Icon name="book"/>Competition Instructions <span>⌄</span></summary><p>Complete assigned activities during the competition period and follow Boston University community guidelines.</p></details><details><summary><Icon name="link"/>Participant Invitation Link <span>⌄</span></summary><p>wellbeing.bu.edu/join/fall-wellbeing</p></details></div></>;
+function CompetitionOverview({
+  competition,
+  onTeams,
+  onEdit,
+}: {
+  competition: AdminCompetition;
+  onTeams: () => void;
+  onEdit: () => void;
+}) {
+  return (
+    <>
+      <div className="event-metrics">
+        <article>
+          <Icon name="users" />
+          <strong>{competition.participants}</strong>
+          <span>Registered Students</span>
+        </article>
+        <article>
+          <Icon name="trophy" />
+          <strong>{competition.type === 'Group' ? '3' : '—'}</strong>
+          <span>Teams</span>
+        </article>
+        <button onClick={competition.type === 'Group' ? onTeams : undefined}>
+          <Icon name="user" />
+          <strong>{competition.type === 'Group' ? '7' : '0'}</strong>
+          <span>Unassigned Students</span>
+          {competition.type === 'Group' && <b>View list</b>}
+        </button>
+        <button>
+          <Icon name="clock" />
+          <strong>104</strong>
+          <span>Completed Activities</span>
+          <b>View activity</b>
+        </button>
+      </div>
+      <section className="event-band">
+        <div>
+          <small>COMPETITION TYPE</small>
+          <strong>{competition.type}</strong>
+        </div>
+        <div>
+          <small>COMPETITION DATES</small>
+          <strong>{competition.dates}</strong>
+        </div>
+        <div>
+          <small>ACTIVITIES</small>
+          <strong>{competition.activities} assigned</strong>
+        </div>
+        <button onClick={onEdit}>Edit Competition</button>
+      </section>
+      <div className="event-accordions">
+        <details>
+          <summary>
+            <Icon name="qr" />
+            Participant QR Code <span>⌄</span>
+          </summary>
+          <p>
+            Students scan this competition code to open registration. Team invitations remain
+            team-specific.
+          </p>
+        </details>
+        <details>
+          <summary>
+            <Icon name="book" />
+            Competition Instructions <span>⌄</span>
+          </summary>
+          <p>
+            Complete assigned activities during the competition period and follow Boston University
+            community guidelines.
+          </p>
+        </details>
+        <details>
+          <summary>
+            <Icon name="link" />
+            Participant Invitation Link <span>⌄</span>
+          </summary>
+          <p>wellbeing.bu.edu/join/fall-wellbeing</p>
+        </details>
+      </div>
+    </>
+  );
 }
 
-type TeamParticipant={id:string;name:string;email:string;points:number};
-type CompetitionTeam={id:string;name:string;code:string;members:TeamParticipant[]};
-function TeamManager({competitionId,notify}:{competitionId:string;notify:(m:string)=>void}) {
-  const [teams,setTeams]=useState<CompetitionTeam[]>([]);const [participants,setParticipants]=useState<TeamParticipant[]>([]);const [selectedId,setSelectedId]=useState('');const [teamSize,setTeamSize]=useState(5);const [newTeamName,setNewTeamName]=useState('');const [loading,setLoading]=useState(true);const [working,setWorking]=useState(false);const [expandedTeamId,setExpandedTeamId]=useState('');const [editingTeamId,setEditingTeamId]=useState('');const [teamNameDraft,setTeamNameDraft]=useState('');
-  const load=useCallback(async()=>{const client=getSupabaseBrowserClient();if(!client)return;const [teamResult,participantResult]=await Promise.all([client.from('teams').select('id,name,team_code,team_memberships(participant_id)').eq('competition_id',competitionId).order('created_at'),client.from('participants').select('id,display_name,email,points').eq('competition_id',competitionId).order('created_at')]);if(teamResult.error||participantResult.error){notify(`Could not load team data: ${teamResult.error?.message??participantResult.error?.message}`);setLoading(false);return;}const people=(participantResult.data??[]).map(row=>({id:row.id,name:row.display_name,email:row.email??'',points:row.points}));const byId=new Map(people.map(person=>[person.id,person]));setParticipants(people);setTeams((teamResult.data??[]).map(row=>({id:row.id,name:row.name,code:row.team_code,members:(row.team_memberships??[]).flatMap(membership=>{const member=byId.get(membership.participant_id);return member?[member]:[];})})));setLoading(false);},[competitionId,notify]);
+type TeamParticipant = { id: string; name: string; email: string; points: number };
+type CompetitionTeam = { id: string; name: string; code: string; members: TeamParticipant[] };
+function TeamManager({
+  competitionId,
+  notify,
+}: {
+  competitionId: string;
+  notify: (m: string) => void;
+}) {
+  const [teams, setTeams] = useState<CompetitionTeam[]>([]);
+  const [participants, setParticipants] = useState<TeamParticipant[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [teamSize, setTeamSize] = useState(5);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [expandedTeamId, setExpandedTeamId] = useState('');
+  const [editingTeamId, setEditingTeamId] = useState('');
+  const [teamNameDraft, setTeamNameDraft] = useState('');
+  const load = useCallback(async () => {
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    const [teamResult, participantResult] = await Promise.all([
+      client
+        .from('teams')
+        .select('id,name,team_code,team_memberships(participant_id)')
+        .eq('competition_id', competitionId)
+        .order('created_at'),
+      client
+        .from('participants')
+        .select('id,display_name,email,points')
+        .eq('competition_id', competitionId)
+        .order('created_at'),
+    ]);
+    if (teamResult.error || participantResult.error) {
+      notify(
+        `Could not load team data: ${teamResult.error?.message ?? participantResult.error?.message}`,
+      );
+      setLoading(false);
+      return;
+    }
+    const people = (participantResult.data ?? []).map((row) => ({
+      id: row.id,
+      name: row.display_name,
+      email: row.email ?? '',
+      points: row.points,
+    }));
+    const byId = new Map(people.map((person) => [person.id, person]));
+    setParticipants(people);
+    setTeams(
+      (teamResult.data ?? []).map((row) => ({
+        id: row.id,
+        name: row.name,
+        code: row.team_code,
+        members: (row.team_memberships ?? []).flatMap((membership) => {
+          const member = byId.get(membership.participant_id);
+          return member ? [member] : [];
+        }),
+      })),
+    );
+    setLoading(false);
+  }, [competitionId, notify]);
   // Loading is intentionally tied to the selected competition; Supabase resolves asynchronously.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(()=>{void load();},[load]);
-  const assignedIds=new Set(teams.flatMap(team=>team.members.map(member=>member.id)));const unassigned=participants.filter(person=>!assignedIds.has(person.id));const student=unassigned.find(person=>person.id===selectedId)??unassigned[0];
-  function code(){return Math.random().toString(36).slice(2,8).toUpperCase();}
-  async function assign(participant:TeamParticipant,team:CompetitionTeam){const client=getSupabaseBrowserClient();if(!client)return;setWorking(true);if(teams.length){const {error:removeError}=await client.from('team_memberships').delete().eq('participant_id',participant.id).in('team_id',teams.map(item=>item.id));if(removeError){notify(removeError.message);setWorking(false);return;}}const {error}=await client.from('team_memberships').insert({team_id:team.id,participant_id:participant.id});if(error)notify(`Could not assign participant: ${error.message}`);else{notify(`${participant.name} assigned to ${team.name}`);setSelectedId('');await load();}setWorking(false);}
-  async function createTeam(){const client=getSupabaseBrowserClient();if(!client||!newTeamName.trim())return;setWorking(true);const {data,error}=await client.from('teams').insert({competition_id:competitionId,name:newTeamName.trim(),team_code:code()}).select('id,name,team_code').single();if(error){notify(`Could not create team: ${error.message}`);setWorking(false);return;}if(student){const {error:memberError}=await client.from('team_memberships').insert({team_id:data.id,participant_id:student.id});if(memberError){notify(`Team created, but assignment failed: ${memberError.message}`);setWorking(false);await load();return;}}setNewTeamName('');setSelectedId('');notify('Team created');await load();setWorking(false);}
-  async function deleteTeam(team:CompetitionTeam){if(!window.confirm(`Delete “${team.name}”? Its members will become unassigned.`))return;const client=getSupabaseBrowserClient();if(!client)return;const {error}=await client.from('teams').delete().eq('id',team.id).eq('competition_id',competitionId);if(error)notify(`Could not delete team: ${error.message}`);else{notify('Team deleted');await load();}}
-  async function renameTeam(team:CompetitionTeam){const name=teamNameDraft.trim();if(!name)return;const client=getSupabaseBrowserClient();if(!client)return;setWorking(true);const {error}=await client.from('teams').update({name}).eq('id',team.id).eq('competition_id',competitionId);if(error)notify(`Could not rename team: ${error.message}`);else{notify('Team name updated');setEditingTeamId('');await load();}setWorking(false);}
-  async function removeMember(team:CompetitionTeam,member:TeamParticipant){const client=getSupabaseBrowserClient();if(!client)return;setWorking(true);const {error}=await client.from('team_memberships').delete().eq('team_id',team.id).eq('participant_id',member.id);if(error)notify(`Could not remove member: ${error.message}`);else{notify(`${member.name} moved to the unassigned pool`);await load();}setWorking(false);}
-  async function assignEveryone(){const client=getSupabaseBrowserClient();if(!client||!unassigned.length)return;setWorking(true);let destinations=teams.map(team=>({...team,members:[...team.members]}));const capacity=destinations.reduce((sum,team)=>sum+Math.max(0,teamSize-team.members.length),0);const needed=Math.max(0,Math.ceil((unassigned.length-capacity)/teamSize));if(needed){const {data,error}=await client.from('teams').insert(Array.from({length:needed},(_,index)=>({competition_id:competitionId,name:`Wellbeing Team ${teams.length+index+1}`,team_code:code()}))).select('id,name,team_code');if(error){notify(`Could not create teams: ${error.message}`);setWorking(false);return;}destinations=[...destinations,...(data??[]).map(team=>({id:team.id,name:team.name,code:team.team_code,members:[]}))];}const memberships=unassigned.map(person=>{const destination=destinations.filter(team=>team.members.length<teamSize).sort((a,b)=>a.members.length-b.members.length)[0]??destinations.sort((a,b)=>a.members.length-b.members.length)[0];destination.members.push(person);return {team_id:destination.id,participant_id:person.id};});const {error}=await client.from('team_memberships').insert(memberships);if(error)notify(`Could not assign participants: ${error.message}`);else{notify(`${unassigned.length} participants assigned`);await load();}setWorking(false);}
-  async function unassignEveryone(){const client=getSupabaseBrowserClient();if(!client||!teams.length)return;setWorking(true);const {error}=await client.from('team_memberships').delete().in('team_id',teams.map(team=>team.id));if(error)notify(`Could not unassign participants: ${error.message}`);else{notify('All participants moved to the waiting list');await load();}setWorking(false);}
-  if(loading)return <div className="competition-loading">Loading team assignment…</div>;
-  return <><div className="subpage-heading"><div><h2>Team Assignment</h2><p>Teams and participants shown here come directly from this competition.</p></div></div><section className="auto-assignment"><header><Icon name="spark"/><div><h3>Automatic Team Assignment</h3><p>Balance all currently unassigned participants. Existing team memberships stay unchanged.</p></div></header><div className="auto-assignment-body"><div className="assignment-modes"><button className="active"><i/><span><strong>Random and balanced</strong><small>Keep team sizes as even as possible using the target size.</small></span></button></div><div className="assignment-controls"><label>Target team size<input type="number" min="2" max="12" value={teamSize} onChange={event=>setTeamSize(Math.max(2,Number(event.target.value)||2))}/></label><button className="primary-button" disabled={working||!unassigned.length} onClick={assignEveryone}><Icon name="move"/> Assign Everyone</button><button className="secondary-button danger" disabled={working||!assignedIds.size} onClick={unassignEveryone}>↶ Unassign Everyone</button></div></div><footer><span><strong>{participants.length}</strong> participants</span><span><strong>{unassigned.length}</strong> waiting</span><span><strong>{teams.length}</strong> teams</span><span><strong>{assignedIds.size}</strong> assigned</span></footer></section><div className="manual-assignment"><section className="waiting-list"><header><h3>Unassigned List</h3><p>{unassigned.length?'Select a participant, then choose their team.':'All registered participants are assigned.'}</p></header>{unassigned.length?unassigned.map(item=><button className={student?.id===item.id?'active':''} key={item.id} onClick={()=>setSelectedId(item.id)}><strong>{item.name}</strong><span>{item.email}</span><small>{item.points} points</small></button>):<div className="empty-waiting">No unassigned participants.</div>}</section><section className="participant-assignment">{student&&<header><div><span>SELECTED PARTICIPANT</span><h3>{student.name}</h3><p>{student.email}</p><small>{student.points} points</small></div></header>}<div className="assignment-destinations"><article className="create-team-card"><Icon name="plus"/><h4>Create New Team</h4><p>Create an empty team or assign the selected participant immediately.</p><label>Team Name<input value={newTeamName} onChange={event=>setNewTeamName(event.target.value)} placeholder="Kenmore Crawlers"/></label><button className="primary-button" disabled={working||!newTeamName.trim()} onClick={createTeam}>Create Team</button></article>{teams.map(team=><article className="assignment-team-card" key={team.id}><div>{editingTeamId===team.id?<div className="team-name-editor"><input value={teamNameDraft} onChange={event=>setTeamNameDraft(event.target.value)} autoFocus/><button disabled={working||!teamNameDraft.trim()} onClick={()=>renameTeam(team)}>Save</button><button onClick={()=>setEditingTeamId('')}>Cancel</button></div>:<h4>{team.name}</h4>}<button className="team-member-count" onClick={()=>setExpandedTeamId(current=>current===team.id?'':team.id)} aria-expanded={expandedTeamId===team.id}><Icon name="users" size={15}/>{team.members.length}</button></div><p>{team.members.length?`${team.members.length} ${team.members.length===1?'member':'members'}`:'No members yet'}</p>{expandedTeamId===team.id&&<div className="team-member-details"><strong>TEAM MEMBERS</strong>{team.members.length?team.members.map(member=><div key={member.id}><span><b>{member.name}</b><small>{member.email} · {member.points} points</small></span><button disabled={working} aria-label={`Remove ${member.name} from ${team.name}`} onClick={()=>removeMember(team,member)}><Icon name="trash" size={15}/></button></div>):<p>No one has been assigned to this team.</p>}</div>}<small>TEAM CODE</small><strong>{team.code}</strong><div className="team-card-actions"><button className="secondary-button" onClick={()=>navigator.clipboard.writeText(team.code)}>Copy code</button><button className="secondary-button" onClick={()=>{setEditingTeamId(team.id);setTeamNameDraft(team.name);}}>Edit name</button>{student&&<button className="primary-button" disabled={working} onClick={()=>assign(student,team)}><Icon name="users" size={16}/> Assign</button>}<button className="team-delete-button" aria-label={`Delete ${team.name}`} onClick={()=>deleteTeam(team)}><Icon name="trash" size={16}/></button></div></article>)}</div></section></div></>;
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+  const assignedIds = new Set(teams.flatMap((team) => team.members.map((member) => member.id)));
+  const unassigned = participants.filter((person) => !assignedIds.has(person.id));
+  const student = unassigned.find((person) => person.id === selectedId) ?? unassigned[0];
+  function code() {
+    return Math.random().toString(36).slice(2, 8).toUpperCase();
+  }
+  async function assign(participant: TeamParticipant, team: CompetitionTeam) {
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    setWorking(true);
+    if (teams.length) {
+      const { error: removeError } = await client
+        .from('team_memberships')
+        .delete()
+        .eq('participant_id', participant.id)
+        .in(
+          'team_id',
+          teams.map((item) => item.id),
+        );
+      if (removeError) {
+        notify(removeError.message);
+        setWorking(false);
+        return;
+      }
+    }
+    const { error } = await client
+      .from('team_memberships')
+      .insert({ team_id: team.id, participant_id: participant.id });
+    if (error) notify(`Could not assign participant: ${error.message}`);
+    else {
+      notify(`${participant.name} assigned to ${team.name}`);
+      setSelectedId('');
+      await load();
+    }
+    setWorking(false);
+  }
+  async function createTeam() {
+    const client = getSupabaseBrowserClient();
+    if (!client || !newTeamName.trim()) return;
+    setWorking(true);
+    const { data, error } = await client
+      .from('teams')
+      .insert({ competition_id: competitionId, name: newTeamName.trim(), team_code: code() })
+      .select('id,name,team_code')
+      .single();
+    if (error) {
+      notify(`Could not create team: ${error.message}`);
+      setWorking(false);
+      return;
+    }
+    if (student) {
+      const { error: memberError } = await client
+        .from('team_memberships')
+        .insert({ team_id: data.id, participant_id: student.id });
+      if (memberError) {
+        notify(`Team created, but assignment failed: ${memberError.message}`);
+        setWorking(false);
+        await load();
+        return;
+      }
+    }
+    setNewTeamName('');
+    setSelectedId('');
+    notify('Team created');
+    await load();
+    setWorking(false);
+  }
+  async function deleteTeam(team: CompetitionTeam) {
+    if (!window.confirm(`Delete “${team.name}”? Its members will become unassigned.`)) return;
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    const { error } = await client
+      .from('teams')
+      .delete()
+      .eq('id', team.id)
+      .eq('competition_id', competitionId);
+    if (error) notify(`Could not delete team: ${error.message}`);
+    else {
+      notify('Team deleted');
+      await load();
+    }
+  }
+  async function renameTeam(team: CompetitionTeam) {
+    const name = teamNameDraft.trim();
+    if (!name) return;
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    setWorking(true);
+    const { error } = await client
+      .from('teams')
+      .update({ name })
+      .eq('id', team.id)
+      .eq('competition_id', competitionId);
+    if (error) notify(`Could not rename team: ${error.message}`);
+    else {
+      notify('Team name updated');
+      setEditingTeamId('');
+      await load();
+    }
+    setWorking(false);
+  }
+  async function removeMember(team: CompetitionTeam, member: TeamParticipant) {
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    setWorking(true);
+    const { error } = await client
+      .from('team_memberships')
+      .delete()
+      .eq('team_id', team.id)
+      .eq('participant_id', member.id);
+    if (error) notify(`Could not remove member: ${error.message}`);
+    else {
+      notify(`${member.name} moved to the unassigned pool`);
+      await load();
+    }
+    setWorking(false);
+  }
+  async function assignEveryone() {
+    const client = getSupabaseBrowserClient();
+    if (!client || !unassigned.length) return;
+    setWorking(true);
+    let destinations = teams.map((team) => ({ ...team, members: [...team.members] }));
+    const capacity = destinations.reduce(
+      (sum, team) => sum + Math.max(0, teamSize - team.members.length),
+      0,
+    );
+    const needed = Math.max(0, Math.ceil((unassigned.length - capacity) / teamSize));
+    if (needed) {
+      const { data, error } = await client
+        .from('teams')
+        .insert(
+          Array.from({ length: needed }, (_, index) => ({
+            competition_id: competitionId,
+            name: `Wellbeing Team ${teams.length + index + 1}`,
+            team_code: code(),
+          })),
+        )
+        .select('id,name,team_code');
+      if (error) {
+        notify(`Could not create teams: ${error.message}`);
+        setWorking(false);
+        return;
+      }
+      destinations = [
+        ...destinations,
+        ...(data ?? []).map((team) => ({
+          id: team.id,
+          name: team.name,
+          code: team.team_code,
+          members: [],
+        })),
+      ];
+    }
+    const memberships = unassigned.map((person) => {
+      const destination =
+        destinations
+          .filter((team) => team.members.length < teamSize)
+          .sort((a, b) => a.members.length - b.members.length)[0] ??
+        destinations.sort((a, b) => a.members.length - b.members.length)[0];
+      destination.members.push(person);
+      return { team_id: destination.id, participant_id: person.id };
+    });
+    const { error } = await client.from('team_memberships').insert(memberships);
+    if (error) notify(`Could not assign participants: ${error.message}`);
+    else {
+      notify(`${unassigned.length} participants assigned`);
+      await load();
+    }
+    setWorking(false);
+  }
+  async function unassignEveryone() {
+    const client = getSupabaseBrowserClient();
+    if (!client || !teams.length) return;
+    setWorking(true);
+    const { error } = await client
+      .from('team_memberships')
+      .delete()
+      .in(
+        'team_id',
+        teams.map((team) => team.id),
+      );
+    if (error) notify(`Could not unassign participants: ${error.message}`);
+    else {
+      notify('All participants moved to the waiting list');
+      await load();
+    }
+    setWorking(false);
+  }
+  if (loading) return <div className="competition-loading">Loading team assignment…</div>;
+  return (
+    <>
+      <div className="subpage-heading">
+        <div>
+          <h2>Team Assignment</h2>
+          <p>Teams and participants shown here come directly from this competition.</p>
+        </div>
+      </div>
+      <section className="auto-assignment">
+        <header>
+          <Icon name="spark" />
+          <div>
+            <h3>Automatic Team Assignment</h3>
+            <p>
+              Balance all currently unassigned participants. Existing team memberships stay
+              unchanged.
+            </p>
+          </div>
+        </header>
+        <div className="auto-assignment-body">
+          <div className="assignment-modes">
+            <button className="active">
+              <i />
+              <span>
+                <strong>Random and balanced</strong>
+                <small>Keep team sizes as even as possible using the target size.</small>
+              </span>
+            </button>
+          </div>
+          <div className="assignment-controls">
+            <label>
+              Target team size
+              <input
+                type="number"
+                min="2"
+                max="12"
+                value={teamSize}
+                onChange={(event) => setTeamSize(Math.max(2, Number(event.target.value) || 2))}
+              />
+            </label>
+            <button
+              className="primary-button"
+              disabled={working || !unassigned.length}
+              onClick={assignEveryone}
+            >
+              <Icon name="move" /> Assign Everyone
+            </button>
+            <button
+              className="secondary-button danger"
+              disabled={working || !assignedIds.size}
+              onClick={unassignEveryone}
+            >
+              ↶ Unassign Everyone
+            </button>
+          </div>
+        </div>
+        <footer>
+          <span>
+            <strong>{participants.length}</strong> participants
+          </span>
+          <span>
+            <strong>{unassigned.length}</strong> waiting
+          </span>
+          <span>
+            <strong>{teams.length}</strong> teams
+          </span>
+          <span>
+            <strong>{assignedIds.size}</strong> assigned
+          </span>
+        </footer>
+      </section>
+      <div className="manual-assignment">
+        <section className="waiting-list">
+          <header>
+            <h3>Unassigned List</h3>
+            <p>
+              {unassigned.length
+                ? 'Select a participant, then choose their team.'
+                : 'All registered participants are assigned.'}
+            </p>
+          </header>
+          {unassigned.length ? (
+            unassigned.map((item) => (
+              <button
+                className={student?.id === item.id ? 'active' : ''}
+                key={item.id}
+                onClick={() => setSelectedId(item.id)}
+              >
+                <strong>{item.name}</strong>
+                <span>{item.email}</span>
+                <small>{item.points} points</small>
+              </button>
+            ))
+          ) : (
+            <div className="empty-waiting">No unassigned participants.</div>
+          )}
+        </section>
+        <section className="participant-assignment">
+          {student && (
+            <header>
+              <div>
+                <span>SELECTED PARTICIPANT</span>
+                <h3>{student.name}</h3>
+                <p>{student.email}</p>
+                <small>{student.points} points</small>
+              </div>
+            </header>
+          )}
+          <div className="assignment-destinations">
+            <article className="create-team-card">
+              <Icon name="plus" />
+              <h4>Create New Team</h4>
+              <p>Create an empty team or assign the selected participant immediately.</p>
+              <label>
+                Team Name
+                <input
+                  value={newTeamName}
+                  onChange={(event) => setNewTeamName(event.target.value)}
+                  placeholder="Kenmore Crawlers"
+                />
+              </label>
+              <button
+                className="primary-button"
+                disabled={working || !newTeamName.trim()}
+                onClick={createTeam}
+              >
+                Create Team
+              </button>
+            </article>
+            {teams.map((team) => (
+              <article className="assignment-team-card" key={team.id}>
+                <div>
+                  {editingTeamId === team.id ? (
+                    <div className="team-name-editor">
+                      <input
+                        value={teamNameDraft}
+                        onChange={(event) => setTeamNameDraft(event.target.value)}
+                        autoFocus
+                      />
+                      <button
+                        disabled={working || !teamNameDraft.trim()}
+                        onClick={() => renameTeam(team)}
+                      >
+                        Save
+                      </button>
+                      <button onClick={() => setEditingTeamId('')}>Cancel</button>
+                    </div>
+                  ) : (
+                    <h4>{team.name}</h4>
+                  )}
+                  <button
+                    className="team-member-count"
+                    onClick={() =>
+                      setExpandedTeamId((current) => (current === team.id ? '' : team.id))
+                    }
+                    aria-expanded={expandedTeamId === team.id}
+                  >
+                    <Icon name="users" size={15} />
+                    {team.members.length}
+                  </button>
+                </div>
+                <p>
+                  {team.members.length
+                    ? `${team.members.length} ${team.members.length === 1 ? 'member' : 'members'}`
+                    : 'No members yet'}
+                </p>
+                {expandedTeamId === team.id && (
+                  <div className="team-member-details">
+                    <strong>TEAM MEMBERS</strong>
+                    {team.members.length ? (
+                      team.members.map((member) => (
+                        <div key={member.id}>
+                          <span>
+                            <b>{member.name}</b>
+                            <small>
+                              {member.email} · {member.points} points
+                            </small>
+                          </span>
+                          <button
+                            disabled={working}
+                            aria-label={`Remove ${member.name} from ${team.name}`}
+                            onClick={() => removeMember(team, member)}
+                          >
+                            <Icon name="trash" size={15} />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p>No one has been assigned to this team.</p>
+                    )}
+                  </div>
+                )}
+                <small>TEAM CODE</small>
+                <strong>{team.code}</strong>
+                <div className="team-card-actions">
+                  <button
+                    className="secondary-button"
+                    onClick={() => navigator.clipboard.writeText(team.code)}
+                  >
+                    Copy code
+                  </button>
+                  <button
+                    className="secondary-button"
+                    onClick={() => {
+                      setEditingTeamId(team.id);
+                      setTeamNameDraft(team.name);
+                    }}
+                  >
+                    Edit name
+                  </button>
+                  {student && (
+                    <button
+                      className="primary-button"
+                      disabled={working}
+                      onClick={() => assign(student, team)}
+                    >
+                      <Icon name="users" size={16} /> Assign
+                    </button>
+                  )}
+                  <button
+                    className="team-delete-button"
+                    aria-label={`Delete ${team.name}`}
+                    onClick={() => deleteTeam(team)}
+                  >
+                    <Icon name="trash" size={16} />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
+  );
 }
 
-type AdminParticipant={id:string;name:string;email:string;team:string;points:number;completions:Array<{id:string;title:string;dimension:Dimension;type:string;points:number;completedAt:string}>};
-function CompetitionParticipants({competitionId,grouped}:{competitionId:string;grouped:boolean}) {
-  const [people,setPeople]=useState<AdminParticipant[]>([]);
-  const [selectedId,setSelectedId]=useState('');
-  const [loading,setLoading]=useState(true);
-  const selected=people.find(person=>person.id===selectedId)??people[0];
-  async function deleteParticipant(person:AdminParticipant){if(!window.confirm(`Permanently remove ${person.name} from this competition?`))return;const client=getSupabaseBrowserClient();if(!client)return;const {error}=await client.from('participants').delete().eq('id',person.id).eq('competition_id',competitionId);if(error)return;setPeople(current=>current.filter(item=>item.id!==person.id));setSelectedId(current=>current===person.id?'':current);}
+type AdminParticipant = {
+  id: string;
+  name: string;
+  email: string;
+  team: string;
+  points: number;
+  completions: Array<{
+    id: string;
+    title: string;
+    dimension: Dimension;
+    type: string;
+    points: number;
+    completedAt: string;
+  }>;
+};
+function CompetitionParticipants({
+  competitionId,
+  grouped,
+}: {
+  competitionId: string;
+  grouped: boolean;
+}) {
+  const [people, setPeople] = useState<AdminParticipant[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const selected = people.find((person) => person.id === selectedId) ?? people[0];
+  async function deleteParticipant(person: AdminParticipant) {
+    if (!window.confirm(`Permanently remove ${person.name} from this competition?`)) return;
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    const { error } = await client
+      .from('participants')
+      .delete()
+      .eq('id', person.id)
+      .eq('competition_id', competitionId);
+    if (error) return;
+    setPeople((current) => current.filter((item) => item.id !== person.id));
+    setSelectedId((current) => (current === person.id ? '' : current));
+  }
   /* DESIGN DECISION: Activity-level completion is visible only to administrators; student teammates receive aggregate point contributions only. */
   /* PROTOTYPE: Students use a browser-held profile UUID until BU authentication replaces it. */
   /* TODO(PRODUCTION): Derive administrator authorization from server sessions and audit access to completion records. */
-  useEffect(()=>{const client=getSupabaseBrowserClient();if(!client)return;client.from('participants').select('id,display_name,email,points,team_memberships(teams(name)),activity_completions(id,points_awarded,completed_at,activities(title,dimension,completion_type))').eq('competition_id',competitionId).order('created_at').then(({data})=>{const mapped=(data??[]).map(raw=>{const row=raw as unknown as Record<string,unknown>;const memberships=Array.isArray(row.team_memberships)?row.team_memberships as Array<Record<string,unknown>>:[];const teams=memberships[0]?.teams;const teamRecord=(Array.isArray(teams)?teams[0]:teams) as Record<string,unknown>|undefined;const rawCompletions=Array.isArray(row.activity_completions)?row.activity_completions as Array<Record<string,unknown>>:[];const completions=rawCompletions.map(completion=>{const activitiesRelation=completion.activities;const activity=(Array.isArray(activitiesRelation)?activitiesRelation[0]:activitiesRelation) as Record<string,unknown>|undefined;return {id:String(completion.id),title:String(activity?.title??'Activity'),dimension:String(activity?.dimension??'Physical') as Dimension,type:activity?.completion_type==='timed'?'Timed':'Daily check-in',points:Number(completion.points_awarded),completedAt:String(completion.completed_at)};}).sort((a,b)=>new Date(b.completedAt).getTime()-new Date(a.completedAt).getTime());return {id:String(row.id),name:String(row.display_name),email:String(row.email??''),team:String(teamRecord?.name??'Unassigned'),points:Number(row.points),completions};});setPeople(mapped);setSelectedId(mapped[0]?.id??'');setLoading(false);});},[competitionId]);
-  if(loading)return <div className="competition-loading">Loading participants…</div>;
-  if(!selected)return <><div className="subpage-heading"><div><h2>Participants & Teams</h2><p>Students will appear here after joining this competition.</p></div></div><div className="library-empty">No participants have joined yet.</div></>;
-  return <><div className="subpage-heading"><div><h2>Participants & Teams</h2><p>Select a participant to review their completed activities.</p></div></div><div className="admin-participant-workspace"><section className="participant-directory"><header><strong>Registered students</strong><span>{people.length} participants</span></header>{people.map(person=><div className={selected.id===person.id?'participant-directory-row active':'participant-directory-row'} key={person.id}><button onClick={()=>setSelectedId(person.id)}><span>{person.name.split(' ').map(part=>part[0]).join('')}</span><div><strong>{person.name}</strong><small>{grouped?person.team:'Individual participant'}</small></div><b>{person.points} pts</b></button><button className="participant-delete" aria-label={`Delete ${person.name}`} onClick={()=>deleteParticipant(person)}><Icon name="trash" size={17}/></button></div>)}</section><section className="participant-detail"><header><span>{selected.name.split(' ').map(part=>part[0]).join('')}</span><div><h3>{selected.name}</h3><p>{grouped?selected.team:'Individual competition'} · {selected.points} points</p><small>{selected.email}</small></div></header><div className="participant-activity-summary"><strong>{selected.completions.length}</strong><span>activities completed</span></div><div className="participant-completions">{selected.completions.map(activity=><article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><h4>{activity.title}</h4><p>{activity.dimension} · {activity.type}</p></div><b>+{activity.points} pts</b><span>{new Date(activity.completedAt).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</span></article>)}</div></section></div></>;
+  useEffect(() => {
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    client
+      .from('participants')
+      .select(
+        'id,display_name,email,points,team_memberships(teams(name)),activity_completions(id,points_awarded,completed_at,activities(title,dimension,completion_type))',
+      )
+      .eq('competition_id', competitionId)
+      .order('created_at')
+      .then(({ data }) => {
+        const mapped = (data ?? []).map((raw) => {
+          const row = raw as unknown as Record<string, unknown>;
+          const memberships = Array.isArray(row.team_memberships)
+            ? (row.team_memberships as Array<Record<string, unknown>>)
+            : [];
+          const teams = memberships[0]?.teams;
+          const teamRecord = (Array.isArray(teams) ? teams[0] : teams) as
+            | Record<string, unknown>
+            | undefined;
+          const rawCompletions = Array.isArray(row.activity_completions)
+            ? (row.activity_completions as Array<Record<string, unknown>>)
+            : [];
+          const completions = rawCompletions
+            .map((completion) => {
+              const activitiesRelation = completion.activities;
+              const activity = (
+                Array.isArray(activitiesRelation) ? activitiesRelation[0] : activitiesRelation
+              ) as Record<string, unknown> | undefined;
+              return {
+                id: String(completion.id),
+                title: String(activity?.title ?? 'Activity'),
+                dimension: String(activity?.dimension ?? 'Physical') as Dimension,
+                type: activity?.completion_type === 'timed' ? 'Timed' : 'Daily check-in',
+                points: Number(completion.points_awarded),
+                completedAt: String(completion.completed_at),
+              };
+            })
+            .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+          return {
+            id: String(row.id),
+            name: String(row.display_name),
+            email: String(row.email ?? ''),
+            team: String(teamRecord?.name ?? 'Unassigned'),
+            points: Number(row.points),
+            completions,
+          };
+        });
+        setPeople(mapped);
+        setSelectedId(mapped[0]?.id ?? '');
+        setLoading(false);
+      });
+  }, [competitionId]);
+  if (loading) return <div className="competition-loading">Loading participants…</div>;
+  if (!selected)
+    return (
+      <>
+        <div className="subpage-heading">
+          <div>
+            <h2>Participants & Teams</h2>
+            <p>Students will appear here after joining this competition.</p>
+          </div>
+        </div>
+        <div className="library-empty">No participants have joined yet.</div>
+      </>
+    );
+  return (
+    <>
+      <div className="subpage-heading">
+        <div>
+          <h2>Participants & Teams</h2>
+          <p>Select a participant to review their completed activities.</p>
+        </div>
+      </div>
+      <div className="admin-participant-workspace">
+        <section className="participant-directory">
+          <header>
+            <strong>Registered students</strong>
+            <span>{people.length} participants</span>
+          </header>
+          {people.map((person) => (
+            <div
+              className={
+                selected.id === person.id
+                  ? 'participant-directory-row active'
+                  : 'participant-directory-row'
+              }
+              key={person.id}
+            >
+              <button onClick={() => setSelectedId(person.id)}>
+                <span>
+                  {person.name
+                    .split(' ')
+                    .map((part) => part[0])
+                    .join('')}
+                </span>
+                <div>
+                  <strong>{person.name}</strong>
+                  <small>{grouped ? person.team : 'Individual participant'}</small>
+                </div>
+                <b>{person.points} pts</b>
+              </button>
+              <button
+                className="participant-delete"
+                aria-label={`Delete ${person.name}`}
+                onClick={() => deleteParticipant(person)}
+              >
+                <Icon name="trash" size={17} />
+              </button>
+            </div>
+          ))}
+        </section>
+        <section className="participant-detail">
+          <header>
+            <span>
+              {selected.name
+                .split(' ')
+                .map((part) => part[0])
+                .join('')}
+            </span>
+            <div>
+              <h3>{selected.name}</h3>
+              <p>
+                {grouped ? selected.team : 'Individual competition'} · {selected.points} points
+              </p>
+              <small>{selected.email}</small>
+            </div>
+          </header>
+          <div className="participant-activity-summary">
+            <strong>{selected.completions.length}</strong>
+            <span>activities completed</span>
+          </div>
+          <div className="participant-completions">
+            {selected.completions.map((activity) => (
+              <article key={activity.id}>
+                <DimensionIcon dimension={activity.dimension} />
+                <div>
+                  <h4>{activity.title}</h4>
+                  <p>
+                    {activity.dimension} · {activity.type}
+                  </p>
+                </div>
+                <b>+{activity.points} pts</b>
+                <span>
+                  {new Date(activity.completedAt).toLocaleString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
+  );
 }
 
-function AssignedActivities({competitionId,refreshKey,notify,onRemoved}:{competitionId:string;refreshKey:number;notify:(message:string)=>void;onRemoved:()=>void}) {
-  const [items,setItems]=useState<LibraryActivity[]>([]);const [loading,setLoading]=useState(true);const [removingId,setRemovingId]=useState('');
-  useEffect(()=>{getSupabaseBrowserClient()?.from('event_activities').select('activities(id,title,description,dimension,completion_type,duration_minutes,points)').eq('competition_id',competitionId).then(({data})=>{const mapped=(data??[]).flatMap(row=>{const relation=row.activities;const activity=(Array.isArray(relation)?relation[0]:relation) as Record<string,unknown>|null;return activity?[{id:String(activity.id),title:String(activity.title),detail:String(activity.description??''),dimension:String(activity.dimension) as Dimension,type:activity.completion_type==='timed'?'Timed' as const:'Daily check-in' as const,duration:Number(activity.duration_minutes??0),points:Number(activity.points)}]:[];});setItems(mapped);setLoading(false);});},[competitionId,refreshKey]);
+function AssignedActivities({
+  competitionId,
+  refreshKey,
+  notify,
+  onRemoved,
+}: {
+  competitionId: string;
+  refreshKey: number;
+  notify: (message: string) => void;
+  onRemoved: () => void;
+}) {
+  const [items, setItems] = useState<LibraryActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState('');
+  useEffect(() => {
+    getSupabaseBrowserClient()
+      ?.from('event_activities')
+      .select('activities(id,title,description,dimension,completion_type,duration_minutes,points)')
+      .eq('competition_id', competitionId)
+      .then(({ data }) => {
+        const mapped = (data ?? []).flatMap((row) => {
+          const relation = row.activities;
+          const activity = (Array.isArray(relation) ? relation[0] : relation) as Record<
+            string,
+            unknown
+          > | null;
+          return activity
+            ? [
+                {
+                  id: String(activity.id),
+                  title: String(activity.title),
+                  detail: String(activity.description ?? ''),
+                  dimension: String(activity.dimension) as Dimension,
+                  type:
+                    activity.completion_type === 'timed'
+                      ? ('Timed' as const)
+                      : ('Daily check-in' as const),
+                  duration: Number(activity.duration_minutes ?? 0),
+                  points: Number(activity.points),
+                },
+              ]
+            : [];
+        });
+        setItems(mapped);
+        setLoading(false);
+      });
+  }, [competitionId, refreshKey]);
   /* DESIGN DECISION: Removing an assignment hides the activity from future work without deleting the shared library item or historical completions. */
-  async function removeActivity(activity:LibraryActivity){if(!window.confirm(`Remove “${activity.title}” from this competition? Completed records and awarded points will be kept.`))return;const client=getSupabaseBrowserClient();if(!client)return;setRemovingId(activity.id);const {error}=await client.from('event_activities').delete().eq('competition_id',competitionId).eq('activity_id',activity.id);setRemovingId('');if(error){notify(`Could not remove activity: ${error.message}`);return;}setItems(current=>current.filter(item=>item.id!==activity.id));onRemoved();notify('Activity removed from this competition. Existing points were preserved.');}
-  return <><div className="subpage-heading"><div><h2>Assigned activities</h2><p>{loading?'Loading activities…':`${items.length} ${items.length===1?'activity is':'activities are'} available in this competition.`}</p></div></div><section className="panel no-pad">{loading?<div className="competition-loading">Loading activities…</div>:items.length?<div className="activity-admin-table">{items.map(activity=><article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><h3>{activity.title}</h3><p>{activity.dimension} · {activity.type}{activity.type==='Timed'?` · ${activity.duration} minutes`:''}</p></div><strong>{activity.points} pts</strong><button className="assigned-activity-delete" disabled={removingId===activity.id} aria-label={`Remove ${activity.title} from this competition`} title="Remove from this competition" onClick={()=>removeActivity(activity)}><Icon name="trash" size={18}/></button></article>)}</div>:<div className="library-empty">No activities are currently assigned. Use Edit Competition to add activities.</div>}</section></>;
+  async function removeActivity(activity: LibraryActivity) {
+    if (
+      !window.confirm(
+        `Remove “${activity.title}” from this competition? Completed records and awarded points will be kept.`,
+      )
+    )
+      return;
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    setRemovingId(activity.id);
+    const { error } = await client
+      .from('event_activities')
+      .delete()
+      .eq('competition_id', competitionId)
+      .eq('activity_id', activity.id);
+    setRemovingId('');
+    if (error) {
+      notify(`Could not remove activity: ${error.message}`);
+      return;
+    }
+    setItems((current) => current.filter((item) => item.id !== activity.id));
+    onRemoved();
+    notify('Activity removed from this competition. Existing points were preserved.');
+  }
+  return (
+    <>
+      <div className="subpage-heading">
+        <div>
+          <h2>Assigned activities</h2>
+          <p>
+            {loading
+              ? 'Loading activities…'
+              : `${items.length} ${items.length === 1 ? 'activity is' : 'activities are'} available in this competition.`}
+          </p>
+        </div>
+      </div>
+      <section className="panel no-pad">
+        {loading ? (
+          <div className="competition-loading">Loading activities…</div>
+        ) : items.length ? (
+          <div className="activity-admin-table">
+            {items.map((activity) => (
+              <article key={activity.id}>
+                <DimensionIcon dimension={activity.dimension} />
+                <div>
+                  <h3>{activity.title}</h3>
+                  <p>
+                    {activity.dimension} · {activity.type}
+                    {activity.type === 'Timed' ? ` · ${activity.duration} minutes` : ''}
+                  </p>
+                </div>
+                <strong>{activity.points} pts</strong>
+                <button
+                  className="assigned-activity-delete"
+                  disabled={removingId === activity.id}
+                  aria-label={`Remove ${activity.title} from this competition`}
+                  title="Remove from this competition"
+                  onClick={() => removeActivity(activity)}
+                >
+                  <Icon name="trash" size={18} />
+                </button>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="library-empty">
+            No activities are currently assigned. Use Edit Competition to add activities.
+          </div>
+        )}
+      </section>
+    </>
+  );
 }
-type LeaderboardRow={id:string;name:string;detail:string;points:number};
-function AdminLeaderboard({competitionId,type}:{competitionId:string;type:'Individual'|'Group'}){const [rows,setRows]=useState<LeaderboardRow[]>([]);const [loading,setLoading]=useState(true);useEffect(()=>{const client=getSupabaseBrowserClient();if(!client)return;client.from('participants').select('id,display_name,points,team_memberships(teams(id,name))').eq('competition_id',competitionId).then(({data})=>{if(type==='Individual'){setRows((data??[]).map(person=>({id:person.id,name:person.display_name,detail:'Individual participant',points:person.points})).sort((a,b)=>b.points-a.points));}else{const totals=new Map<string,LeaderboardRow>();for(const person of data??[]){const membership=Array.isArray(person.team_memberships)?person.team_memberships[0]:undefined;const relation=membership?.teams;const team=(Array.isArray(relation)?relation[0]:relation) as {id:string;name:string}|null|undefined;if(!team)continue;const current=totals.get(team.id)??{id:team.id,name:team.name,detail:'0 members',points:0};const members=Number(current.detail.split(' ')[0])+1;totals.set(team.id,{...current,detail:`${members} ${members===1?'member':'members'}`,points:current.points+person.points});}setRows([...totals.values()].sort((a,b)=>b.points-a.points));}setLoading(false);});},[competitionId,type]);return <section className="panel"><PanelHeading title={type==='Group'?'Team leaderboard':'Leaderboard'}/>{loading?<div className="competition-loading">Loading leaderboard…</div>:rows.length?<div className="admin-leaderboard">{rows.map((row,index)=><article key={row.id}><strong>{index+1}</strong><span>{row.name.slice(0,2).toUpperCase()}</span><div><h3>{row.name}</h3><p>{row.detail}</p></div><b>{row.points.toLocaleString()} pts</b></article>)}</div>:<div className="leaderboard-empty"><Icon name="trophy" size={30}/><strong>No leaderboard results yet</strong><span>Rankings will appear after participants join and earn points.</span></div>}</section>;}
+type LeaderboardRow = { id: string; name: string; detail: string; points: number };
+function AdminLeaderboard({
+  competitionId,
+  type,
+}: {
+  competitionId: string;
+  type: 'Individual' | 'Group';
+}) {
+  const [rows, setRows] = useState<LeaderboardRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    client
+      .from('participants')
+      .select('id,display_name,points,team_memberships(teams(id,name))')
+      .eq('competition_id', competitionId)
+      .then(({ data }) => {
+        if (type === 'Individual') {
+          setRows(
+            (data ?? [])
+              .map((person) => ({
+                id: person.id,
+                name: person.display_name,
+                detail: 'Individual participant',
+                points: person.points,
+              }))
+              .sort((a, b) => b.points - a.points),
+          );
+        } else {
+          const totals = new Map<string, LeaderboardRow>();
+          for (const person of data ?? []) {
+            const membership = Array.isArray(person.team_memberships)
+              ? person.team_memberships[0]
+              : undefined;
+            const relation = membership?.teams;
+            const team = (Array.isArray(relation) ? relation[0] : relation) as
+              | { id: string; name: string }
+              | null
+              | undefined;
+            if (!team) continue;
+            const current = totals.get(team.id) ?? {
+              id: team.id,
+              name: team.name,
+              detail: '0 members',
+              points: 0,
+            };
+            const members = Number(current.detail.split(' ')[0]) + 1;
+            totals.set(team.id, {
+              ...current,
+              detail: `${members} ${members === 1 ? 'member' : 'members'}`,
+              points: current.points + person.points,
+            });
+          }
+          setRows([...totals.values()].sort((a, b) => b.points - a.points));
+        }
+        setLoading(false);
+      });
+  }, [competitionId, type]);
+  return (
+    <section className="panel">
+      <PanelHeading title={type === 'Group' ? 'Team leaderboard' : 'Leaderboard'} />
+      {loading ? (
+        <div className="competition-loading">Loading leaderboard…</div>
+      ) : rows.length ? (
+        <div className="admin-leaderboard">
+          {rows.map((row, index) => (
+            <article key={row.id}>
+              <strong>{index + 1}</strong>
+              <span>{row.name.slice(0, 2).toUpperCase()}</span>
+              <div>
+                <h3>{row.name}</h3>
+                <p>{row.detail}</p>
+              </div>
+              <b>{row.points.toLocaleString()} pts</b>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="leaderboard-empty">
+          <Icon name="trophy" size={30} />
+          <strong>No leaderboard results yet</strong>
+          <span>Rankings will appear after participants join and earn points.</span>
+        </div>
+      )}
+    </section>
+  );
+}
 
-type LibraryActivity = { id:string; title:string; detail:string; dimension:Dimension; type:'Timed'|'Daily check-in'; duration:number; points:number };
+type LibraryActivity = {
+  id: string;
+  title: string;
+  detail: string;
+  dimension: Dimension;
+  type: 'Timed' | 'Daily check-in';
+  duration: number;
+  points: number;
+};
 
-function ActivityLibrary({notify}:{notify:(m:string)=>void}) {
-  const fallback:LibraryActivity[]=activities.map(activity=>({...activity,id:String(activity.id)}));
-  const supabase=getSupabaseBrowserClient();
-  const [items,setItems]=useState<LibraryActivity[]>(fallback);
-  const [dimension,setDimension]=useState<Dimension|'All'>('All');
-  const [search,setSearch]=useState('');
-  const [createOpen,setCreateOpen]=useState(false);
-  const [editing,setEditing]=useState<LibraryActivity|null>(null);
-  const [loading,setLoading]=useState(Boolean(supabase));
-  const [loadError,setLoadError]=useState('');
+function ActivityLibrary({ notify }: { notify: (m: string) => void }) {
+  const fallback: LibraryActivity[] = activities.map((activity) => ({
+    ...activity,
+    id: String(activity.id),
+  }));
+  const supabase = getSupabaseBrowserClient();
+  const [items, setItems] = useState<LibraryActivity[]>(fallback);
+  const [dimension, setDimension] = useState<Dimension | 'All'>('All');
+  const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<LibraryActivity | null>(null);
+  const [loading, setLoading] = useState(Boolean(supabase));
+  const [loadError, setLoadError] = useState('');
 
   /* DESIGN DECISION: The central activity library is the source of truth; competitions will reference activity IDs rather than copying activity content. */
   /* PROTOTYPE: If Supabase environment variables are unavailable, the page falls back to the original in-memory activities so design review is never blocked. */
   /* TODO(PRODUCTION): Require authenticated administrator authorization before database writes and replace the temporary anonymous write policies. */
-  useEffect(()=>{
-    if(!supabase)return;
-    supabase.from('activities').select('id,title,description,dimension,completion_type,duration_minutes,points').eq('is_active',true).order('created_at').then(({data,error})=>{
-      if(error){setLoadError(error.message);setLoading(false);return;}
-      setItems((data??[]).map(row=>({id:row.id,title:row.title,detail:row.description,dimension:row.dimension as Dimension,type:row.completion_type==='timed'?'Timed':'Daily check-in',duration:row.duration_minutes??0,points:row.points})));
-      setLoading(false);
-    });
-  },[supabase]);
+  useEffect(() => {
+    if (!supabase) return;
+    supabase
+      .from('activities')
+      .select('id,title,description,dimension,completion_type,duration_minutes,points')
+      .eq('is_active', true)
+      .order('created_at')
+      .then(({ data, error }) => {
+        if (error) {
+          setLoadError(error.message);
+          setLoading(false);
+          return;
+        }
+        setItems(
+          (data ?? []).map((row) => ({
+            id: row.id,
+            title: row.title,
+            detail: row.description,
+            dimension: row.dimension as Dimension,
+            type: row.completion_type === 'timed' ? 'Timed' : 'Daily check-in',
+            duration: row.duration_minutes ?? 0,
+            points: row.points,
+          })),
+        );
+        setLoading(false);
+      });
+  }, [supabase]);
 
-  const shown=items.filter(activity=>(dimension==='All'||activity.dimension===dimension)&&`${activity.title} ${activity.detail}`.toLowerCase().includes(search.trim().toLowerCase()));
-  async function createActivity(input:Omit<LibraryActivity,'id'>){
-    const client=getSupabaseBrowserClient();
-    if(!client){setItems(current=>[...current,{...input,id:`local-${Date.now()}`}]);setCreateOpen(false);notify('Activity added locally');return;}
-    const {data,error}=await client.from('activities').insert({title:input.title,description:input.detail,dimension:input.dimension,completion_type:input.type==='Timed'?'timed':'daily_check_in',duration_minutes:input.type==='Timed'?input.duration:null,points:input.points}).select('id,title,description,dimension,completion_type,duration_minutes,points').single();
-    if(error){notify(`Could not create activity: ${error.message}`);return;}
-    setItems(current=>[...current,{id:data.id,title:data.title,detail:data.description,dimension:data.dimension as Dimension,type:data.completion_type==='timed'?'Timed':'Daily check-in',duration:data.duration_minutes??0,points:data.points}]);
-    setCreateOpen(false);notify('Activity created');
-  }
-  async function updateActivity(input:Omit<LibraryActivity,'id'>){
-    if(!editing)return;
-    const client=getSupabaseBrowserClient();
-    if(client&&!editing.id.startsWith('local-')){
-      const {error}=await client.from('activities').update({title:input.title,description:input.detail,dimension:input.dimension,completion_type:input.type==='Timed'?'timed':'daily_check_in',duration_minutes:input.type==='Timed'?input.duration:null,points:input.points,updated_at:new Date().toISOString()}).eq('id',editing.id);
-      if(error){notify(`Could not update activity: ${error.message}`);return;}
+  const shown = items.filter(
+    (activity) =>
+      (dimension === 'All' || activity.dimension === dimension) &&
+      `${activity.title} ${activity.detail}`.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+  async function createActivity(input: Omit<LibraryActivity, 'id'>) {
+    const client = getSupabaseBrowserClient();
+    if (!client) {
+      setItems((current) => [...current, { ...input, id: `local-${Date.now()}` }]);
+      setCreateOpen(false);
+      notify('Activity added locally');
+      return;
     }
-    setItems(current=>current.map(item=>item.id===editing.id?{...input,id:editing.id}:item));
-    setEditing(null);notify('Activity updated');
+    const { data, error } = await client
+      .from('activities')
+      .insert({
+        title: input.title,
+        description: input.detail,
+        dimension: input.dimension,
+        completion_type: input.type === 'Timed' ? 'timed' : 'daily_check_in',
+        duration_minutes: input.type === 'Timed' ? input.duration : null,
+        points: input.points,
+      })
+      .select('id,title,description,dimension,completion_type,duration_minutes,points')
+      .single();
+    if (error) {
+      notify(`Could not create activity: ${error.message}`);
+      return;
+    }
+    setItems((current) => [
+      ...current,
+      {
+        id: data.id,
+        title: data.title,
+        detail: data.description,
+        dimension: data.dimension as Dimension,
+        type: data.completion_type === 'timed' ? 'Timed' : 'Daily check-in',
+        duration: data.duration_minutes ?? 0,
+        points: data.points,
+      },
+    ]);
+    setCreateOpen(false);
+    notify('Activity created');
   }
-  async function archiveActivity(activity:LibraryActivity){
-    if(!window.confirm(`Remove “${activity.title}” from the activity library?`))return;
-    const client=getSupabaseBrowserClient();
-    if(client&&!activity.id.startsWith('local-')){const {error}=await client.rpc('delete_activity',{activity_id:activity.id});if(error){notify(`Could not delete activity: ${error.message}`);return;}}
-    setItems(current=>current.filter(item=>item.id!==activity.id));notify('Activity removed');
+  async function updateActivity(input: Omit<LibraryActivity, 'id'>) {
+    if (!editing) return;
+    const client = getSupabaseBrowserClient();
+    if (client && !editing.id.startsWith('local-')) {
+      const { error } = await client
+        .from('activities')
+        .update({
+          title: input.title,
+          description: input.detail,
+          dimension: input.dimension,
+          completion_type: input.type === 'Timed' ? 'timed' : 'daily_check_in',
+          duration_minutes: input.type === 'Timed' ? input.duration : null,
+          points: input.points,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', editing.id);
+      if (error) {
+        notify(`Could not update activity: ${error.message}`);
+        return;
+      }
+    }
+    setItems((current) =>
+      current.map((item) => (item.id === editing.id ? { ...input, id: editing.id } : item)),
+    );
+    setEditing(null);
+    notify('Activity updated');
   }
-  return <><AdminHeading eyebrow="CONTENT" title="Activity library" text="Manage reusable activities across every competition." action="Create activity" onAction={()=>setCreateOpen(true)}/>{loadError&&<div className="library-error">Database unavailable: showing the local prototype library.</div>}<div className="library-layout"><aside className="library-filters"><strong>Dimensions</strong><button className={dimension==='All'?'active':''} onClick={()=>setDimension('All')}>All activities <span>{items.length}</span></button>{(Object.keys(dimensionMeta) as Dimension[]).map(item=><button className={dimension===item?'active':''} key={item} onClick={()=>setDimension(item)}><DimensionIcon dimension={item} size="sm"/>{item}<span>{items.filter(activity=>activity.dimension===item).length}</span></button>)}</aside><section className="panel no-pad"><div className="library-top"><label className="admin-search"><Icon name="search" size={17}/><input value={search} onChange={event=>setSearch(event.target.value)} placeholder="Search activities"/></label><button>Timed & check-in</button></div><div className="activity-admin-table">{loading?<div className="library-empty">Loading activities…</div>:shown.length?shown.map(activity=><article key={activity.id}><DimensionIcon dimension={activity.dimension}/><div><h3>{activity.title}</h3><p className="activity-description">{activity.detail||'No description yet.'}</p><p>{activity.dimension} · {activity.type}{activity.type==='Timed'?` · ${activity.duration} minutes`:''}</p></div><strong>{activity.points} pts</strong><div className="activity-row-actions"><button className="activity-edit" aria-label={`Edit ${activity.title}`} onClick={()=>setEditing(activity)}><Icon name="edit" size={18}/></button><button className="activity-delete" aria-label={`Delete ${activity.title}`} onClick={()=>archiveActivity(activity)}><Icon name="trash" size={18}/></button></div></article>):<div className="library-empty">No activities found.</div>}</div></section></div>{createOpen&&<ActivityModal onClose={()=>setCreateOpen(false)} onSave={createActivity}/>} {editing&&<ActivityModal activity={editing} onClose={()=>setEditing(null)} onSave={updateActivity}/>}</>;
+  async function archiveActivity(activity: LibraryActivity) {
+    if (!window.confirm(`Remove “${activity.title}” from the activity library?`)) return;
+    const client = getSupabaseBrowserClient();
+    if (client && !activity.id.startsWith('local-')) {
+      const { error } = await client.rpc('delete_activity', { activity_id: activity.id });
+      if (error) {
+        notify(`Could not delete activity: ${error.message}`);
+        return;
+      }
+    }
+    setItems((current) => current.filter((item) => item.id !== activity.id));
+    notify('Activity removed');
+  }
+  return (
+    <>
+      <AdminHeading
+        eyebrow="CONTENT"
+        title="Activity library"
+        text="Manage reusable activities across every competition."
+        action="Create activity"
+        onAction={() => setCreateOpen(true)}
+      />
+      {loadError && (
+        <div className="library-error">
+          Database unavailable: showing the local prototype library.
+        </div>
+      )}
+      <div className="library-layout">
+        <aside className="library-filters">
+          <strong>Dimensions</strong>
+          <button
+            className={dimension === 'All' ? 'active' : ''}
+            onClick={() => setDimension('All')}
+          >
+            All activities <span>{items.length}</span>
+          </button>
+          {(Object.keys(dimensionMeta) as Dimension[]).map((item) => (
+            <button
+              className={dimension === item ? 'active' : ''}
+              key={item}
+              onClick={() => setDimension(item)}
+            >
+              <DimensionIcon dimension={item} size="sm" />
+              {item}
+              <span>{items.filter((activity) => activity.dimension === item).length}</span>
+            </button>
+          ))}
+        </aside>
+        <section className="panel no-pad">
+          <div className="library-top">
+            <label className="admin-search">
+              <Icon name="search" size={17} />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search activities"
+              />
+            </label>
+            <button>Timed & check-in</button>
+          </div>
+          <div className="activity-admin-table">
+            {loading ? (
+              <div className="library-empty">Loading activities…</div>
+            ) : shown.length ? (
+              shown.map((activity) => (
+                <article key={activity.id}>
+                  <DimensionIcon dimension={activity.dimension} />
+                  <div>
+                    <h3>{activity.title}</h3>
+                    <p className="activity-description">
+                      {activity.detail || 'No description yet.'}
+                    </p>
+                    <p>
+                      {activity.dimension} · {activity.type}
+                      {activity.type === 'Timed' ? ` · ${activity.duration} minutes` : ''}
+                    </p>
+                  </div>
+                  <strong>{activity.points} pts</strong>
+                  <div className="activity-row-actions">
+                    <button
+                      className="activity-edit"
+                      aria-label={`Edit ${activity.title}`}
+                      onClick={() => setEditing(activity)}
+                    >
+                      <Icon name="edit" size={18} />
+                    </button>
+                    <button
+                      className="activity-delete"
+                      aria-label={`Delete ${activity.title}`}
+                      onClick={() => archiveActivity(activity)}
+                    >
+                      <Icon name="trash" size={18} />
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="library-empty">No activities found.</div>
+            )}
+          </div>
+        </section>
+      </div>
+      {createOpen && <ActivityModal onClose={() => setCreateOpen(false)} onSave={createActivity} />}{' '}
+      {editing && (
+        <ActivityModal
+          activity={editing}
+          onClose={() => setEditing(null)}
+          onSave={updateActivity}
+        />
+      )}
+    </>
+  );
 }
 
-function ActivityModal({activity,onClose,onSave}:{activity?:LibraryActivity;onClose:()=>void;onSave:(activity:Omit<LibraryActivity,'id'>)=>void}){
-  const [title,setTitle]=useState(activity?.title??''); const [detail,setDetail]=useState(activity?.detail??''); const [dimension,setDimension]=useState<Dimension>(activity?.dimension??'Environmental'); const [type,setType]=useState<'Timed'|'Daily check-in'>(activity?.type??'Daily check-in'); const [points,setPoints]=useState(activity?.points??30); const [duration,setDuration]=useState(activity?.duration||10);
-  const valid=title.trim().length>=2&&detail.trim().length>=4&&points>0&&(type==='Daily check-in'||duration>0);
-  return <div className="modal-backdrop admin-modal-wrap" onMouseDown={onClose}><section className="create-modal activity-create-modal" onMouseDown={event=>event.stopPropagation()}><header><div><span>ACTIVITY LIBRARY</span><h2>{activity?'Edit activity':'Create activity'}</h2><p>{activity?'Clarify what students should do and how it is completed.':'Add a reusable activity to the central library.'}</p></div><button onClick={onClose}><Icon name="close"/></button></header><div className="form-body"><label>Activity title<input value={title} onChange={event=>setTitle(event.target.value)} placeholder="e.g. Take a mindful campus walk"/></label><label>Description<textarea value={detail} onChange={event=>setDetail(event.target.value)} placeholder="Explain clearly what the student should do."/><small>Required. This instruction is shown to students when they open the activity.</small></label><label>Well-being dimension<select value={dimension} onChange={event=>setDimension(event.target.value as Dimension)}>{(Object.keys(dimensionMeta) as Dimension[]).map(item=><option key={item}>{item}</option>)}</select></label><div className="activity-form-row"><label>Completion type<select value={type} onChange={event=>setType(event.target.value as 'Timed'|'Daily check-in')}><option>Daily check-in</option><option>Timed</option></select></label>{type==='Timed'&&<label>Duration (minutes)<input type="number" min="1" value={duration} onChange={event=>setDuration(Number(event.target.value))}/></label>}<label>Points<input type="number" min="1" value={points} onChange={event=>setPoints(Number(event.target.value))}/></label></div></div><footer><button className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={!valid} onClick={()=>onSave({title:title.trim(),detail:detail.trim(),dimension,type,duration:type==='Timed'?duration:0,points})}>{activity?'Save Changes':'Create Activity'}</button></footer></section></div>;
+function ActivityModal({
+  activity,
+  onClose,
+  onSave,
+}: {
+  activity?: LibraryActivity;
+  onClose: () => void;
+  onSave: (activity: Omit<LibraryActivity, 'id'>) => void;
+}) {
+  const [title, setTitle] = useState(activity?.title ?? '');
+  const [detail, setDetail] = useState(activity?.detail ?? '');
+  const [dimension, setDimension] = useState<Dimension>(activity?.dimension ?? 'Environmental');
+  const [type, setType] = useState<'Timed' | 'Daily check-in'>(activity?.type ?? 'Daily check-in');
+  const [points, setPoints] = useState(activity?.points ?? 30);
+  const [duration, setDuration] = useState(activity?.duration || 10);
+  const valid =
+    title.trim().length >= 2 &&
+    detail.trim().length >= 4 &&
+    points > 0 &&
+    (type === 'Daily check-in' || duration > 0);
+  return (
+    <div className="modal-backdrop admin-modal-wrap" onMouseDown={onClose}>
+      <section
+        className="create-modal activity-create-modal"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span>ACTIVITY LIBRARY</span>
+            <h2>{activity ? 'Edit activity' : 'Create activity'}</h2>
+            <p>
+              {activity
+                ? 'Clarify what students should do and how it is completed.'
+                : 'Add a reusable activity to the central library.'}
+            </p>
+          </div>
+          <button onClick={onClose}>
+            <Icon name="close" />
+          </button>
+        </header>
+        <div className="form-body">
+          <label>
+            Activity title
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="e.g. Take a mindful campus walk"
+            />
+          </label>
+          <label>
+            Description
+            <textarea
+              value={detail}
+              onChange={(event) => setDetail(event.target.value)}
+              placeholder="Explain clearly what the student should do."
+            />
+            <small>
+              Required. This instruction is shown to students when they open the activity.
+            </small>
+          </label>
+          <label>
+            Well-being dimension
+            <select
+              value={dimension}
+              onChange={(event) => setDimension(event.target.value as Dimension)}
+            >
+              {(Object.keys(dimensionMeta) as Dimension[]).map((item) => (
+                <option key={item}>{item}</option>
+              ))}
+            </select>
+          </label>
+          <div className="activity-form-row">
+            <label>
+              Completion type
+              <select
+                value={type}
+                onChange={(event) => setType(event.target.value as 'Timed' | 'Daily check-in')}
+              >
+                <option>Daily check-in</option>
+                <option>Timed</option>
+              </select>
+            </label>
+            {type === 'Timed' && (
+              <label>
+                Duration (minutes)
+                <input
+                  type="number"
+                  min="1"
+                  value={duration}
+                  onChange={(event) => setDuration(Number(event.target.value))}
+                />
+              </label>
+            )}
+            <label>
+              Points
+              <input
+                type="number"
+                min="1"
+                value={points}
+                onChange={(event) => setPoints(Number(event.target.value))}
+              />
+            </label>
+          </div>
+        </div>
+        <footer>
+          <button className="secondary-button" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="primary-button"
+            disabled={!valid}
+            onClick={() =>
+              onSave({
+                title: title.trim(),
+                detail: detail.trim(),
+                dimension,
+                type,
+                duration: type === 'Timed' ? duration : 0,
+                points,
+              })
+            }
+          >
+            {activity ? 'Save Changes' : 'Create Activity'}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
 }
 
 /* DESIGN DECISION: A competition is the parent record; participants, teams, memberships, and assigned activities reference its UUID. */
 /* TODO(PRODUCTION): Move this multi-table write into a server transaction and persist CSV-imported activities before association. */
-type ScheduleValue={date:string;hour:string;minute:string;period:'AM'|'PM'};
+type ScheduleValue = { date: string; hour: string; minute: string; period: 'AM' | 'PM' };
 
-function defaultSchedule(dayOffset:number,hour:number):ScheduleValue{
-  const date=new Date();
-  date.setDate(date.getDate()+dayOffset);
-  const localDate=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
-  return {date:localDate,hour:String(hour>12?hour-12:hour||12),minute:'00',period:hour>=12?'PM':'AM'};
+function defaultSchedule(dayOffset: number, hour: number): ScheduleValue {
+  const date = new Date();
+  date.setDate(date.getDate() + dayOffset);
+  const localDate = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return {
+    date: localDate,
+    hour: String(hour > 12 ? hour - 12 : hour || 12),
+    minute: '00',
+    period: hour >= 12 ? 'PM' : 'AM',
+  };
 }
 
-function scheduleDateTime(value:ScheduleValue){
-  const hour12=Number(value.hour);
-  const hour24=value.period==='AM'?(hour12===12?0:hour12):(hour12===12?12:hour12+12);
-  return `${value.date}T${String(hour24).padStart(2,'0')}:${value.minute}`;
+function scheduleDateTime(value: ScheduleValue) {
+  const hour12 = Number(value.hour);
+  const hour24 =
+    value.period === 'AM' ? (hour12 === 12 ? 0 : hour12) : hour12 === 12 ? 12 : hour12 + 12;
+  return `${value.date}T${String(hour24).padStart(2, '0')}:${value.minute}`;
 }
 
-const wheelHours=Array.from({length:12},(_,index)=>String(index+1));
-const wheelMinutes=Array.from({length:60},(_,index)=>String(index).padStart(2,'0'));
-const wheelPeriods=['AM','PM'];
-function WheelColumn({label,options,value,onChange}:{label:string;options:string[];value:string;onChange:(value:string)=>void}){
-  const ref=useRef<HTMLDivElement>(null);const timer=useRef<ReturnType<typeof setTimeout>|null>(null);const itemHeight=40;
-  useEffect(()=>{const index=Math.max(0,options.indexOf(value));ref.current?.scrollTo({top:index*itemHeight});},[options,value]);
-  function selectFromScroll(){if(timer.current)clearTimeout(timer.current);timer.current=setTimeout(()=>{const index=Math.max(0,Math.min(options.length-1,Math.round((ref.current?.scrollTop??0)/itemHeight)));if(options[index]!==value)onChange(options[index]);},90);}
-  return <div className="wheel-column"><span>{label}</span><div ref={ref} className="wheel-scroll" onScroll={selectFromScroll}>{options.map(option=><button type="button" key={option} className={option===value?'selected':''} onClick={()=>onChange(option)}>{option}</button>)}</div></div>;
+const wheelHours = Array.from({ length: 12 }, (_, index) => String(index + 1));
+const wheelMinutes = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, '0'));
+const wheelPeriods = ['AM', 'PM'];
+function WheelColumn({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const itemHeight = 40;
+  useEffect(() => {
+    const index = Math.max(0, options.indexOf(value));
+    ref.current?.scrollTo({ top: index * itemHeight });
+  }, [options, value]);
+  function selectFromScroll() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      const index = Math.max(
+        0,
+        Math.min(options.length - 1, Math.round((ref.current?.scrollTop ?? 0) / itemHeight)),
+      );
+      if (options[index] !== value) onChange(options[index]);
+    }, 90);
+  }
+  return (
+    <div className="wheel-column">
+      <span>{label}</span>
+      <div ref={ref} className="wheel-scroll" onScroll={selectFromScroll}>
+        {options.map((option) => (
+          <button
+            type="button"
+            key={option}
+            className={option === value ? 'selected' : ''}
+            onClick={() => onChange(option)}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
-function TimeWheelPicker({legend,value,onChange}:{legend:string;value:ScheduleValue;onChange:(value:ScheduleValue)=>void}){
-  const [open,setOpen]=useState(false);
-  return <div className="time-wheel-picker"><span>Time</span><button type="button" className={open?'time-wheel-trigger active':'time-wheel-trigger'} aria-label={`${legend} time`} aria-expanded={open} onClick={()=>setOpen(current=>!current)}><Icon name="clock" size={16}/><strong>{value.hour}:{value.minute}</strong><small>{value.period}</small><b>⌄</b></button>{open&&<div className="time-wheel-popover"><div className="wheel-selection"/><div className="time-wheels"><WheelColumn label="Hour" options={wheelHours} value={value.hour} onChange={hour=>onChange({...value,hour})}/><WheelColumn label="Minute" options={wheelMinutes} value={value.minute} onChange={minute=>onChange({...value,minute})}/><WheelColumn label="Period" options={wheelPeriods} value={value.period} onChange={period=>onChange({...value,period:period as 'AM'|'PM'})}/></div><button type="button" className="wheel-done" onClick={()=>setOpen(false)}>Done</button></div>}</div>;
+function TimeWheelPicker({
+  legend,
+  value,
+  onChange,
+}: {
+  legend: string;
+  value: ScheduleValue;
+  onChange: (value: ScheduleValue) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="time-wheel-picker">
+      <span>Time</span>
+      <button
+        type="button"
+        className={open ? 'time-wheel-trigger active' : 'time-wheel-trigger'}
+        aria-label={`${legend} time`}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Icon name="clock" size={16} />
+        <strong>
+          {value.hour}:{value.minute}
+        </strong>
+        <small>{value.period}</small>
+        <b>⌄</b>
+      </button>
+      {open && (
+        <div className="time-wheel-popover">
+          <div className="wheel-selection" />
+          <div className="time-wheels">
+            <WheelColumn
+              label="Hour"
+              options={wheelHours}
+              value={value.hour}
+              onChange={(hour) => onChange({ ...value, hour })}
+            />
+            <WheelColumn
+              label="Minute"
+              options={wheelMinutes}
+              value={value.minute}
+              onChange={(minute) => onChange({ ...value, minute })}
+            />
+            <WheelColumn
+              label="Period"
+              options={wheelPeriods}
+              value={value.period}
+              onChange={(period) => onChange({ ...value, period: period as 'AM' | 'PM' })}
+            />
+          </div>
+          <button type="button" className="wheel-done" onClick={() => setOpen(false)}>
+            Done
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
-function ScheduleField({legend,value,onChange}:{legend:string;value:ScheduleValue;onChange:(value:ScheduleValue)=>void}){
-  return <fieldset className="schedule-field"><legend>{legend}</legend><div className="schedule-control-grid"><label><span>Date</span><input aria-label={`${legend} date`} type="date" value={value.date} onChange={event=>onChange({...value,date:event.target.value})}/></label><TimeWheelPicker legend={legend} value={value} onChange={onChange}/></div></fieldset>;
+function ScheduleField({
+  legend,
+  value,
+  onChange,
+}: {
+  legend: string;
+  value: ScheduleValue;
+  onChange: (value: ScheduleValue) => void;
+}) {
+  return (
+    <fieldset className="schedule-field">
+      <legend>{legend}</legend>
+      <div className="schedule-control-grid">
+        <label>
+          <span>Date</span>
+          <input
+            aria-label={`${legend} date`}
+            type="date"
+            value={value.date}
+            onChange={(event) => onChange({ ...value, date: event.target.value })}
+          />
+        </label>
+        <TimeWheelPicker legend={legend} value={value} onChange={onChange} />
+      </div>
+    </fieldset>
+  );
 }
 
-type EditableActivity={id:string;title:string;dimension:Dimension};
-function localDateTimeInput(value:string|undefined){if(!value)return '';const date=new Date(value);const local=new Date(date.getTime()-date.getTimezoneOffset()*60000);return local.toISOString().slice(0,16);}
-function EditCompetition({competition,onClose,onSaved}:{competition:AdminCompetition;onClose:()=>void;onSaved:(competition:AdminCompetition)=>void}){
-  const [name,setName]=useState(competition.name);const [description,setDescription]=useState(competition.description??'');const [startAt,setStartAt]=useState(localDateTimeInput(competition.startAt));const [endAt,setEndAt]=useState(localDateTimeInput(competition.endAt));const [library,setLibrary]=useState<EditableActivity[]>([]);const [selectedIds,setSelectedIds]=useState<string[]>([]);const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);const [error,setError]=useState('');
-  useEffect(()=>{const client=getSupabaseBrowserClient();if(!client)return;Promise.all([client.from('activities').select('id,title,dimension').eq('is_active',true).order('dimension').order('title'),client.from('event_activities').select('activity_id').eq('competition_id',competition.id)]).then(([activitiesResult,assignedResult])=>{if(activitiesResult.error||assignedResult.error){setError(activitiesResult.error?.message??assignedResult.error?.message??'Could not load activities');setLoading(false);return;}setLibrary((activitiesResult.data??[]) as EditableActivity[]);setSelectedIds((assignedResult.data??[]).map(item=>item.activity_id));setLoading(false);});},[competition.id]);
-  const valid=name.trim().length>=3&&description.trim().length>=4&&Boolean(startAt)&&Boolean(endAt)&&new Date(endAt)>new Date(startAt);
-  async function save(){const client=getSupabaseBrowserClient();if(!client||!valid)return;setSaving(true);setError('');const startIso=new Date(startAt).toISOString();const endIso=new Date(endAt).toISOString();const status=effectiveCompetitionStatus(startIso,endIso);const {error:updateError}=await client.from('competitions').update({name:name.trim(),description:description.trim(),start_at:startIso,end_at:endIso,status:status.toLowerCase(),updated_at:new Date().toISOString()}).eq('id',competition.id);if(updateError){setError(updateError.message);setSaving(false);return;}const {error:removeError}=await client.from('event_activities').delete().eq('competition_id',competition.id).not('activity_id','in',`(${selectedIds.join(',')||'00000000-0000-0000-0000-000000000000'})`);if(removeError){setError(removeError.message);setSaving(false);return;}if(selectedIds.length){const {error:addError}=await client.from('event_activities').upsert(selectedIds.map(activityId=>({competition_id:competition.id,activity_id:activityId})),{onConflict:'competition_id,activity_id'});if(addError){setError(addError.message);setSaving(false);return;}}onSaved({...competition,name:name.trim(),description:description.trim(),startAt:startIso,endAt:endIso,status,dates:formatCompetitionDates(startIso,endIso),activities:selectedIds.length});}
-  const dimensions=[...new Set(library.map(item=>item.dimension))];
-  return <div className="modal-backdrop admin-modal-wrap" onMouseDown={onClose}><section className="create-modal edit-competition-modal" onMouseDown={event=>event.stopPropagation()}><header><div><span>EDIT COMPETITION</span><h2>{competition.name}</h2><p>Update details and choose which activities remain available.</p></div><button onClick={onClose}><Icon name="close"/></button></header><div className="form-body"><label>Competition name<input value={name} onChange={event=>setName(event.target.value)}/></label><label>Description<textarea value={description} onChange={event=>setDescription(event.target.value)}/></label><div className="competition-datetime-fields"><label>Start date and time<input type="datetime-local" value={startAt} onChange={event=>setStartAt(event.target.value)}/></label><label>End date and time<input type="datetime-local" value={endAt} onChange={event=>setEndAt(event.target.value)}/></label></div><div className="edit-activity-heading"><div><strong>Assigned activities</strong><span>Removing one stops future access. Existing completions and points are preserved.</span></div><b>{selectedIds.length} selected</b></div>{loading?<div className="competition-loading">Loading activities…</div>:<div className="edit-activity-list">{dimensions.map(dimension=><section key={dimension}><h3>{dimension}</h3>{library.filter(item=>item.dimension===dimension).map(item=><label key={item.id}><input type="checkbox" checked={selectedIds.includes(item.id)} onChange={()=>setSelectedIds(current=>current.includes(item.id)?current.filter(id=>id!==item.id):[...current,item.id])}/><span>{item.title}</span></label>)}</section>)}</div>}</div>{error&&<p className="competition-form-error">{error}</p>}<footer><button className="secondary-button" onClick={onClose}>Cancel</button><button className="primary-button" disabled={!valid||loading||saving} onClick={save}>{saving?'Saving…':'Save changes'}</button></footer></section></div>;
+type EditableActivity = { id: string; title: string; dimension: Dimension };
+function localDateTimeInput(value: string | undefined) {
+  if (!value) return '';
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+function EditCompetition({
+  competition,
+  onClose,
+  onSaved,
+}: {
+  competition: AdminCompetition;
+  onClose: () => void;
+  onSaved: (competition: AdminCompetition) => void;
+}) {
+  const [name, setName] = useState(competition.name);
+  const [description, setDescription] = useState(competition.description ?? '');
+  const [startAt, setStartAt] = useState(localDateTimeInput(competition.startAt));
+  const [endAt, setEndAt] = useState(localDateTimeInput(competition.endAt));
+  const [library, setLibrary] = useState<EditableActivity[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    Promise.all([
+      client
+        .from('activities')
+        .select('id,title,dimension')
+        .eq('is_active', true)
+        .order('dimension')
+        .order('title'),
+      client.from('event_activities').select('activity_id').eq('competition_id', competition.id),
+    ]).then(([activitiesResult, assignedResult]) => {
+      if (activitiesResult.error || assignedResult.error) {
+        setError(
+          activitiesResult.error?.message ??
+            assignedResult.error?.message ??
+            'Could not load activities',
+        );
+        setLoading(false);
+        return;
+      }
+      setLibrary((activitiesResult.data ?? []) as EditableActivity[]);
+      setSelectedIds((assignedResult.data ?? []).map((item) => item.activity_id));
+      setLoading(false);
+    });
+  }, [competition.id]);
+  const valid =
+    name.trim().length >= 3 &&
+    description.trim().length >= 4 &&
+    Boolean(startAt) &&
+    Boolean(endAt) &&
+    new Date(endAt) > new Date(startAt);
+  async function save() {
+    const client = getSupabaseBrowserClient();
+    if (!client || !valid) return;
+    setSaving(true);
+    setError('');
+    const startIso = new Date(startAt).toISOString();
+    const endIso = new Date(endAt).toISOString();
+    const status = effectiveCompetitionStatus(startIso, endIso);
+    const { error: updateError } = await client
+      .from('competitions')
+      .update({
+        name: name.trim(),
+        description: description.trim(),
+        start_at: startIso,
+        end_at: endIso,
+        status: status.toLowerCase(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', competition.id);
+    if (updateError) {
+      setError(updateError.message);
+      setSaving(false);
+      return;
+    }
+    const { error: removeError } = await client
+      .from('event_activities')
+      .delete()
+      .eq('competition_id', competition.id)
+      .not(
+        'activity_id',
+        'in',
+        `(${selectedIds.join(',') || '00000000-0000-0000-0000-000000000000'})`,
+      );
+    if (removeError) {
+      setError(removeError.message);
+      setSaving(false);
+      return;
+    }
+    if (selectedIds.length) {
+      const { error: addError } = await client.from('event_activities').upsert(
+        selectedIds.map((activityId) => ({
+          competition_id: competition.id,
+          activity_id: activityId,
+        })),
+        { onConflict: 'competition_id,activity_id' },
+      );
+      if (addError) {
+        setError(addError.message);
+        setSaving(false);
+        return;
+      }
+    }
+    onSaved({
+      ...competition,
+      name: name.trim(),
+      description: description.trim(),
+      startAt: startIso,
+      endAt: endIso,
+      status,
+      dates: formatCompetitionDates(startIso, endIso),
+      activities: selectedIds.length,
+    });
+  }
+  const dimensions = [...new Set(library.map((item) => item.dimension))];
+  return (
+    <div className="modal-backdrop admin-modal-wrap" onMouseDown={onClose}>
+      <section
+        className="create-modal edit-competition-modal"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <span>EDIT COMPETITION</span>
+            <h2>{competition.name}</h2>
+            <p>Update details and choose which activities remain available.</p>
+          </div>
+          <button onClick={onClose}>
+            <Icon name="close" />
+          </button>
+        </header>
+        <div className="form-body">
+          <label>
+            Competition name
+            <input value={name} onChange={(event) => setName(event.target.value)} />
+          </label>
+          <label>
+            Description
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+          <div className="competition-datetime-fields">
+            <label>
+              Start date and time
+              <input
+                type="datetime-local"
+                value={startAt}
+                onChange={(event) => setStartAt(event.target.value)}
+              />
+            </label>
+            <label>
+              End date and time
+              <input
+                type="datetime-local"
+                value={endAt}
+                onChange={(event) => setEndAt(event.target.value)}
+              />
+            </label>
+          </div>
+          <div className="edit-activity-heading">
+            <div>
+              <strong>Assigned activities</strong>
+              <span>
+                Removing one stops future access. Existing completions and points are preserved.
+              </span>
+            </div>
+            <b>{selectedIds.length} selected</b>
+          </div>
+          {loading ? (
+            <div className="competition-loading">Loading activities…</div>
+          ) : (
+            <div className="edit-activity-list">
+              {dimensions.map((dimension) => (
+                <section key={dimension}>
+                  <h3>{dimension}</h3>
+                  {library
+                    .filter((item) => item.dimension === dimension)
+                    .map((item) => (
+                      <label key={item.id}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() =>
+                            setSelectedIds((current) =>
+                              current.includes(item.id)
+                                ? current.filter((id) => id !== item.id)
+                                : [...current, item.id],
+                            )
+                          }
+                        />
+                        <span>{item.title}</span>
+                      </label>
+                    ))}
+                </section>
+              ))}
+            </div>
+          )}
+        </div>
+        {error && <p className="competition-form-error">{error}</p>}
+        <footer>
+          <button className="secondary-button" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="primary-button" disabled={!valid || loading || saving} onClick={save}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
 }
 
-function CreateCompetition({onClose,onCreated}:{onClose:()=>void;onCreated:(competition:AdminCompetition)=>void}) {
-  const [step,setStep]=useState(1); const [type,setType]=useState<'Individual'|'Group'>('Group'); const [groupEnrollment,setGroupEnrollment]=useState<'open'|'defined'>('open'); const [definedParticipants,setDefinedParticipants]=useState<ImportedParticipant[]>([]); const [participantFileName,setParticipantFileName]=useState(''); const [participantFileError,setParticipantFileError]=useState(''); const [participantDuplicates,setParticipantDuplicates]=useState(0); const [name,setName]=useState(''); const [description,setDescription]=useState(''); const [startSchedule,setStartSchedule]=useState<ScheduleValue>(()=>defaultSchedule(0,9)); const [endSchedule,setEndSchedule]=useState<ScheduleValue>(()=>defaultSchedule(0,17)); const [rules,setRules]=useState(''); const [disclaimer,setDisclaimer]=useState(''); const [emailTemplate,setEmailTemplate]=useState(''); const [activitySelection,setActivitySelection]=useState<ActivitySelection>({mode:'library',activities:[],libraryActivityIds:[]}); const [templatesLoading,setTemplatesLoading]=useState(true);const [saving,setSaving]=useState(false); const [error,setError]=useState('');
+function CreateCompetition({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (competition: AdminCompetition) => void;
+}) {
+  const [step, setStep] = useState(1);
+  const [type, setType] = useState<'Individual' | 'Group'>('Group');
+  const [groupEnrollment, setGroupEnrollment] = useState<'open' | 'defined'>('open');
+  const [definedParticipants, setDefinedParticipants] = useState<ImportedParticipant[]>([]);
+  const [participantFileName, setParticipantFileName] = useState('');
+  const [participantFileError, setParticipantFileError] = useState('');
+  const [participantDuplicates, setParticipantDuplicates] = useState(0);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [startSchedule, setStartSchedule] = useState<ScheduleValue>(() => defaultSchedule(0, 9));
+  const [endSchedule, setEndSchedule] = useState<ScheduleValue>(() => defaultSchedule(0, 17));
+  const [rules, setRules] = useState('');
+  const [disclaimer, setDisclaimer] = useState('');
+  const [emailTemplate, setEmailTemplate] = useState('');
+  const [activitySelection, setActivitySelection] = useState<ActivitySelection>({
+    mode: 'library',
+    activities: [],
+    libraryActivityIds: [],
+  });
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   /* DESIGN DECISION: Load defaults once when creation opens. The submitted values are then copied into the competition row, isolating it from future template changes. */
-  useEffect(()=>{loadPlatformTemplates().then(templates=>{setRules(templates.participant_rules);setDisclaimer(templates.participant_disclaimer);setEmailTemplate(templates.invitation_message);setTemplatesLoading(false);}).catch(loadError=>{setError(`Could not load competition templates: ${loadError instanceof Error?loadError.message:'Unknown error'}`);setTemplatesLoading(false);});},[]);
-  const startAt=scheduleDateTime(startSchedule); const endAt=scheduleDateTime(endSchedule);
-  const basicsValid=name.trim().length>=3&&description.trim().length>=4&&new Date(endAt)>new Date(startAt)&&(type!=='Group'||groupEnrollment!=='defined'||definedParticipants.length>0);
-  const activityStepValid=activitySelection.mode==='csv'?activitySelection.activities.length>0:activitySelection.mode==='library'?activitySelection.libraryActivityIds.length>0:activitySelection.libraryActivityIds.length>0&&activitySelection.activities.length>0;
-  const validationMessage=name.trim().length<3?'Enter a competition name (at least 3 characters).':description.trim().length<4?'Add a short competition description.':new Date(endAt)<=new Date(startAt)?'End date and time must be later than the start.':type==='Group'&&groupEnrollment==='defined'&&!definedParticipants.length?'Upload a valid participant spreadsheet.':'';
-  async function parseParticipantSpreadsheet(file:File|undefined){setParticipantFileName(file?.name??'');setParticipantFileError('');setParticipantDuplicates(0);setDefinedParticipants([]);if(!file)return;const extension=file.name.toLowerCase().split('.').pop();if(!['csv','xlsx','xls'].includes(extension??'')){setParticipantFileError('Choose a CSV or Excel file (.csv, .xlsx, or .xls).');return;}try{const XLSX=await import('xlsx');const workbook=XLSX.read(await file.arrayBuffer(),{type:'array'});const sheet=workbook.Sheets[workbook.SheetNames[0]];if(!sheet){setParticipantFileError('The workbook does not contain a worksheet.');return;}const rows=XLSX.utils.sheet_to_json<(string|number|null)[]>(sheet,{header:1,raw:false,defval:''});const headers=(rows.shift()??[]).map(cell=>normalizeHeader(String(cell)));const firstIndex=findHeader(headers,['first name','firstname','given name']);const lastIndex=findHeader(headers,['last name','lastname','surname','family name']);const emailIndex=findHeader(headers,['email','email address','emailaddress']);if(firstIndex<0||lastIndex<0||emailIndex<0){setParticipantFileError('The spreadsheet must include First Name, Last Name, and Email columns. Other columns are allowed.');return;}const unique=new Map<string,ImportedParticipant>();let duplicates=0;for(const row of rows){const firstName=String(row[firstIndex]??'').trim();const lastName=String(row[lastIndex]??'').trim();const email=String(row[emailIndex]??'').trim().toLowerCase();if(!firstName&&!lastName&&!email)continue;if(!firstName||!lastName||!/^\S+@\S+\.\S+$/.test(email)){setParticipantFileError('Every populated row must include a valid first name, last name, and email address.');return;}const existing=unique.get(email);if(existing){if(normalizeName(existing.first_name)!==normalizeName(firstName)||normalizeName(existing.last_name)!==normalizeName(lastName)){setParticipantFileError(`The email ${email} appears with different names.`);return;}duplicates+=1;continue;}unique.set(email,{first_name:firstName,last_name:lastName,email});}if(!unique.size){setParticipantFileError('The spreadsheet does not contain any participants.');return;}setParticipantDuplicates(duplicates);setDefinedParticipants([...unique.values()]);}catch{setParticipantFileError('The participant spreadsheet could not be read.');}}
-  async function create(){const client=getSupabaseBrowserClient();if(!client)return;setSaving(true);setError('');const startIso=new Date(startAt).toISOString();const endIso=new Date(endAt).toISOString();const effectiveStatus=effectiveCompetitionStatus(startIso,endIso);const {data,error:competitionError}=await client.from('competitions').insert({name:name.trim(),description:description.trim(),competition_type:type.toLowerCase(),status:effectiveStatus.toLowerCase(),start_at:startIso,end_at:endIso,rules,disclaimer,email_template:emailTemplate,environment:'production'}).select('id,name,competition_code').single();if(competitionError){setError(competitionError.message);setSaving(false);return;}const {data:assignedCount,error:activityError}=await client.rpc('assign_competition_activities_v2',{p_competition_id:data.id,p_mode:activitySelection.mode,p_library_activity_ids:activitySelection.libraryActivityIds,p_activities:activitySelection.activities});if(activityError){await client.from('competitions').delete().eq('id',data.id);setError(`Could not import activities: ${activityError.message}`);setSaving(false);return;}let participantCount=0;if(type==='Group'&&groupEnrollment==='defined'){const {data:importedCount,error:participantError}=await client.rpc('import_competition_participants',{p_competition_id:data.id,p_participants:definedParticipants});if(participantError){await client.from('competitions').delete().eq('id',data.id);setError(`Could not import participants: ${participantError.message}`);setSaving(false);return;}participantCount=Number(importedCount??0);}onCreated({id:data.id,name:data.name,type,status:effectiveStatus,participants:participantCount,activities:Number(assignedCount??0),dates:formatCompetitionDates(startIso,endIso),description:description.trim(),code:data.competition_code,startAt:startIso,endAt:endIso});}
-  return <div className="modal-backdrop admin-modal-wrap" onMouseDown={onClose}><section className="create-modal" onMouseDown={event=>event.stopPropagation()}><header><div><span>NEW COMPETITION</span><h2>Create competition</h2><p>Set the basics, schedule, participant guidance, and activities.</p></div><button onClick={onClose}><Icon name="close"/></button></header><div className="stepper two-step"><span className="active">1 <small>Basics</small></span><i/><span className={step>=2?'active':''}>2 <small>Activities</small></span></div>{templatesLoading?<div className="competition-loading">Loading competition templates…</div>:step===1&&<div className="form-body"><label>Competition name<input value={name} onChange={event=>setName(event.target.value)} placeholder="e.g. Spring Wellbeing Challenge"/></label><label>Description<textarea value={description} onChange={event=>setDescription(event.target.value)} placeholder="What should students know about this competition?"/></label><div><span className="field-label">Competition type</span><div className="type-options"><button className={type==='Individual'?'active':''} onClick={()=>setType('Individual')}><Icon name="user"/><strong>Individual</strong><small>Students participate independently; no teams are created.</small></button><button className={type==='Group'?'active':''} onClick={()=>setType('Group')}><Icon name="users"/><strong>Group</strong><small>Create teams and assign participants from the management page.</small></button></div></div>{type==='Group'&&<div className="group-enrollment-options"><span className="field-label">Group participants</span><div><button type="button" className={groupEnrollment==='open'?'active':''} onClick={()=>setGroupEnrollment('open')}><strong>Open enrollment</strong><small>Students join with a competition or team code.</small></button><button type="button" className={groupEnrollment==='defined'?'active':''} onClick={()=>setGroupEnrollment('defined')}><strong>Defined participant list</strong><small>Upload the students who already belong to this competition.</small></button></div>{groupEnrollment==='defined'&&<div className="participant-upload"><div><strong>Upload participant spreadsheet</strong><span>First Name, Last Name, and Email columns are required. Extra columns are ignored.</span></div><label><input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onChange={event=>parseParticipantSpreadsheet(event.target.files?.[0])}/><span>{participantFileName||'Choose CSV or Excel file'}</span></label>{participantFileError&&<p className="csv-error">{participantFileError}</p>}{definedParticipants.length>0&&<div className="participant-import-summary"><Icon name="check" size={15}/><span><strong>{definedParticipants.length} participants ready</strong><small>{participantDuplicates?`${participantDuplicates} duplicate ${participantDuplicates===1?'row':'rows'} removed by email.`:'No duplicate emails found.'}</small></span></div>}</div>}</div>}<div className="schedule-fields"><ScheduleField legend="Start date and time (Boston time)" value={startSchedule} onChange={setStartSchedule}/><ScheduleField legend="End date and time (Boston time)" value={endSchedule} onChange={setEndSchedule}/></div><label>Participant rules<textarea className="long-field" value={rules} onChange={event=>setRules(event.target.value)}/></label><label>Participant disclaimer<textarea className="long-field" value={disclaimer} onChange={event=>setDisclaimer(event.target.value)}/></label><label>Invitation message<textarea className="long-field" value={emailTemplate} onChange={event=>setEmailTemplate(event.target.value)}/></label></div>}{!templatesLoading&&step===2&&<ActivitySelectionStep value={activitySelection} onChange={setActivitySelection}/>} {error&&<p className="competition-form-error">{error}</p>}<footer>{step===1&&validationMessage&&<span className="competition-validation-note">{validationMessage}</span>}<button className="secondary-button" onClick={()=>step===1?onClose():setStep(1)}>{step===1?'Cancel':'Back'}</button><button className="primary-button" disabled={templatesLoading||saving||(step===1&&!basicsValid)||(step===2&&!activityStepValid)} onClick={()=>step===2?create():setStep(2)}>{saving?'Creating…':step===2?'Create Competition':'Continue'} <Icon name="arrow" size={17}/></button></footer></section></div>;
+  useEffect(() => {
+    loadPlatformTemplates()
+      .then((templates) => {
+        setRules(templates.participant_rules);
+        setDisclaimer(templates.participant_disclaimer);
+        setEmailTemplate(templates.invitation_message);
+        setTemplatesLoading(false);
+      })
+      .catch((loadError) => {
+        setError(
+          `Could not load competition templates: ${loadError instanceof Error ? loadError.message : 'Unknown error'}`,
+        );
+        setTemplatesLoading(false);
+      });
+  }, []);
+  const startAt = scheduleDateTime(startSchedule);
+  const endAt = scheduleDateTime(endSchedule);
+  const basicsValid =
+    name.trim().length >= 3 &&
+    description.trim().length >= 4 &&
+    new Date(endAt) > new Date(startAt) &&
+    (type !== 'Group' || groupEnrollment !== 'defined' || definedParticipants.length > 0);
+  const activityStepValid =
+    activitySelection.mode === 'csv'
+      ? activitySelection.activities.length > 0
+      : activitySelection.mode === 'library'
+        ? activitySelection.libraryActivityIds.length > 0
+        : activitySelection.libraryActivityIds.length > 0 &&
+          activitySelection.activities.length > 0;
+  const validationMessage =
+    name.trim().length < 3
+      ? 'Enter a competition name (at least 3 characters).'
+      : description.trim().length < 4
+        ? 'Add a short competition description.'
+        : new Date(endAt) <= new Date(startAt)
+          ? 'End date and time must be later than the start.'
+          : type === 'Group' && groupEnrollment === 'defined' && !definedParticipants.length
+            ? 'Upload a valid participant spreadsheet.'
+            : '';
+  async function parseParticipantSpreadsheet(file: File | undefined) {
+    setParticipantFileName(file?.name ?? '');
+    setParticipantFileError('');
+    setParticipantDuplicates(0);
+    setDefinedParticipants([]);
+    if (!file) return;
+    const extension = file.name.toLowerCase().split('.').pop();
+    if (!['csv', 'xlsx', 'xls'].includes(extension ?? '')) {
+      setParticipantFileError('Choose a CSV or Excel file (.csv, .xlsx, or .xls).');
+      return;
+    }
+    try {
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!sheet) {
+        setParticipantFileError('The workbook does not contain a worksheet.');
+        return;
+      }
+      const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
+        header: 1,
+        raw: false,
+        defval: '',
+      });
+      const headers = (rows.shift() ?? []).map((cell) => normalizeHeader(String(cell)));
+      const firstIndex = findHeader(headers, ['first name', 'firstname', 'given name']);
+      const lastIndex = findHeader(headers, ['last name', 'lastname', 'surname', 'family name']);
+      const emailIndex = findHeader(headers, ['email', 'email address', 'emailaddress']);
+      if (firstIndex < 0 || lastIndex < 0 || emailIndex < 0) {
+        setParticipantFileError(
+          'The spreadsheet must include First Name, Last Name, and Email columns. Other columns are allowed.',
+        );
+        return;
+      }
+      const unique = new Map<string, ImportedParticipant>();
+      let duplicates = 0;
+      for (const row of rows) {
+        const firstName = String(row[firstIndex] ?? '').trim();
+        const lastName = String(row[lastIndex] ?? '').trim();
+        const email = String(row[emailIndex] ?? '')
+          .trim()
+          .toLowerCase();
+        if (!firstName && !lastName && !email) continue;
+        if (!firstName || !lastName || !/^\S+@\S+\.\S+$/.test(email)) {
+          setParticipantFileError(
+            'Every populated row must include a valid first name, last name, and email address.',
+          );
+          return;
+        }
+        const existing = unique.get(email);
+        if (existing) {
+          if (
+            normalizeName(existing.first_name) !== normalizeName(firstName) ||
+            normalizeName(existing.last_name) !== normalizeName(lastName)
+          ) {
+            setParticipantFileError(`The email ${email} appears with different names.`);
+            return;
+          }
+          duplicates += 1;
+          continue;
+        }
+        unique.set(email, { first_name: firstName, last_name: lastName, email });
+      }
+      if (!unique.size) {
+        setParticipantFileError('The spreadsheet does not contain any participants.');
+        return;
+      }
+      setParticipantDuplicates(duplicates);
+      setDefinedParticipants([...unique.values()]);
+    } catch {
+      setParticipantFileError('The participant spreadsheet could not be read.');
+    }
+  }
+  async function create() {
+    const client = getSupabaseBrowserClient();
+    if (!client) return;
+    setSaving(true);
+    setError('');
+    const startIso = new Date(startAt).toISOString();
+    const endIso = new Date(endAt).toISOString();
+    const effectiveStatus = effectiveCompetitionStatus(startIso, endIso);
+    const { data, error: competitionError } = await client
+      .from('competitions')
+      .insert({
+        name: name.trim(),
+        description: description.trim(),
+        competition_type: type.toLowerCase(),
+        status: effectiveStatus.toLowerCase(),
+        start_at: startIso,
+        end_at: endIso,
+        rules,
+        disclaimer,
+        email_template: emailTemplate,
+        environment: 'production',
+      })
+      .select('id,name,competition_code')
+      .single();
+    if (competitionError) {
+      setError(competitionError.message);
+      setSaving(false);
+      return;
+    }
+    const { data: assignedCount, error: activityError } = await client.rpc(
+      'assign_competition_activities_v2',
+      {
+        p_competition_id: data.id,
+        p_mode: activitySelection.mode,
+        p_library_activity_ids: activitySelection.libraryActivityIds,
+        p_activities: activitySelection.activities,
+      },
+    );
+    if (activityError) {
+      await client.from('competitions').delete().eq('id', data.id);
+      setError(`Could not import activities: ${activityError.message}`);
+      setSaving(false);
+      return;
+    }
+    let participantCount = 0;
+    if (type === 'Group' && groupEnrollment === 'defined') {
+      const { data: importedCount, error: participantError } = await client.rpc(
+        'import_competition_participants',
+        { p_competition_id: data.id, p_participants: definedParticipants },
+      );
+      if (participantError) {
+        await client.from('competitions').delete().eq('id', data.id);
+        setError(`Could not import participants: ${participantError.message}`);
+        setSaving(false);
+        return;
+      }
+      participantCount = Number(importedCount ?? 0);
+    }
+    onCreated({
+      id: data.id,
+      name: data.name,
+      type,
+      status: effectiveStatus,
+      participants: participantCount,
+      activities: Number(assignedCount ?? 0),
+      dates: formatCompetitionDates(startIso, endIso),
+      description: description.trim(),
+      code: data.competition_code,
+      startAt: startIso,
+      endAt: endIso,
+    });
+  }
+  return (
+    <div className="modal-backdrop admin-modal-wrap" onMouseDown={onClose}>
+      <section className="create-modal" onMouseDown={(event) => event.stopPropagation()}>
+        <header>
+          <div>
+            <span>NEW COMPETITION</span>
+            <h2>Create competition</h2>
+            <p>Set the basics, schedule, participant guidance, and activities.</p>
+          </div>
+          <button onClick={onClose}>
+            <Icon name="close" />
+          </button>
+        </header>
+        <div className="stepper two-step">
+          <span className="active">
+            1 <small>Basics</small>
+          </span>
+          <i />
+          <span className={step >= 2 ? 'active' : ''}>
+            2 <small>Activities</small>
+          </span>
+        </div>
+        {templatesLoading ? (
+          <div className="competition-loading">Loading competition templates…</div>
+        ) : (
+          step === 1 && (
+            <div className="form-body">
+              <label>
+                Competition name
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="e.g. Spring Wellbeing Challenge"
+                />
+              </label>
+              <label>
+                Description
+                <textarea
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="What should students know about this competition?"
+                />
+              </label>
+              <div>
+                <span className="field-label">Competition type</span>
+                <div className="type-options">
+                  <button
+                    className={type === 'Individual' ? 'active' : ''}
+                    onClick={() => setType('Individual')}
+                  >
+                    <Icon name="user" />
+                    <strong>Individual</strong>
+                    <small>Students participate independently; no teams are created.</small>
+                  </button>
+                  <button
+                    className={type === 'Group' ? 'active' : ''}
+                    onClick={() => setType('Group')}
+                  >
+                    <Icon name="users" />
+                    <strong>Group</strong>
+                    <small>Create teams and assign participants from the management page.</small>
+                  </button>
+                </div>
+              </div>
+              {type === 'Group' && (
+                <div className="group-enrollment-options">
+                  <span className="field-label">Group participants</span>
+                  <div>
+                    <button
+                      type="button"
+                      className={groupEnrollment === 'open' ? 'active' : ''}
+                      onClick={() => setGroupEnrollment('open')}
+                    >
+                      <strong>Open enrollment</strong>
+                      <small>Students join with a competition or team code.</small>
+                    </button>
+                    <button
+                      type="button"
+                      className={groupEnrollment === 'defined' ? 'active' : ''}
+                      onClick={() => setGroupEnrollment('defined')}
+                    >
+                      <strong>Defined participant list</strong>
+                      <small>Upload the students who already belong to this competition.</small>
+                    </button>
+                  </div>
+                  {groupEnrollment === 'defined' && (
+                    <div className="participant-upload">
+                      <div>
+                        <strong>Upload participant spreadsheet</strong>
+                        <span>
+                          First Name, Last Name, and Email columns are required. Extra columns are
+                          ignored.
+                        </span>
+                      </div>
+                      <label>
+                        <input
+                          type="file"
+                          accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                          onChange={(event) => parseParticipantSpreadsheet(event.target.files?.[0])}
+                        />
+                        <span>{participantFileName || 'Choose CSV or Excel file'}</span>
+                      </label>
+                      {participantFileError && <p className="csv-error">{participantFileError}</p>}
+                      {definedParticipants.length > 0 && (
+                        <div className="participant-import-summary">
+                          <Icon name="check" size={15} />
+                          <span>
+                            <strong>{definedParticipants.length} participants ready</strong>
+                            <small>
+                              {participantDuplicates
+                                ? `${participantDuplicates} duplicate ${participantDuplicates === 1 ? 'row' : 'rows'} removed by email.`
+                                : 'No duplicate emails found.'}
+                            </small>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="schedule-fields">
+                <ScheduleField
+                  legend="Start date and time (Boston time)"
+                  value={startSchedule}
+                  onChange={setStartSchedule}
+                />
+                <ScheduleField
+                  legend="End date and time (Boston time)"
+                  value={endSchedule}
+                  onChange={setEndSchedule}
+                />
+              </div>
+              <label>
+                Participant rules
+                <textarea
+                  className="long-field"
+                  value={rules}
+                  onChange={(event) => setRules(event.target.value)}
+                />
+              </label>
+              <label>
+                Participant disclaimer
+                <textarea
+                  className="long-field"
+                  value={disclaimer}
+                  onChange={(event) => setDisclaimer(event.target.value)}
+                />
+              </label>
+              <label>
+                Invitation message
+                <textarea
+                  className="long-field"
+                  value={emailTemplate}
+                  onChange={(event) => setEmailTemplate(event.target.value)}
+                />
+              </label>
+            </div>
+          )
+        )}
+        {!templatesLoading && step === 2 && (
+          <ActivitySelectionStep value={activitySelection} onChange={setActivitySelection} />
+        )}{' '}
+        {error && <p className="competition-form-error">{error}</p>}
+        <footer>
+          {step === 1 && validationMessage && (
+            <span className="competition-validation-note">{validationMessage}</span>
+          )}
+          <button
+            className="secondary-button"
+            onClick={() => (step === 1 ? onClose() : setStep(1))}
+          >
+            {step === 1 ? 'Cancel' : 'Back'}
+          </button>
+          <button
+            className="primary-button"
+            disabled={
+              templatesLoading ||
+              saving ||
+              (step === 1 && !basicsValid) ||
+              (step === 2 && !activityStepValid)
+            }
+            onClick={() => (step === 2 ? create() : setStep(2))}
+          >
+            {saving ? 'Creating…' : step === 2 ? 'Create Competition' : 'Continue'}{' '}
+            <Icon name="arrow" size={17} />
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
 }
 
 type ActivitySelectionMode = 'library' | 'csv' | 'combined';
-type ImportedActivity={title:string;dimension:Dimension};
-type ImportedParticipant={first_name:string;last_name:string;email:string};
-type LibraryActivityChoice={id:string;title:string;dimension:Dimension};
-type ActivitySelection={mode:ActivitySelectionMode;activities:ImportedActivity[];libraryActivityIds:string[]};
-const csvDimensions = ['Environmental','Social','Emotional','Financial','Intellectual','Spiritual','Physical'] as const;
+type ImportedActivity = { title: string; dimension: Dimension };
+type ImportedParticipant = { first_name: string; last_name: string; email: string };
+type LibraryActivityChoice = { id: string; title: string; dimension: Dimension };
+type ActivitySelection = {
+  mode: ActivitySelectionMode;
+  activities: ImportedActivity[];
+  libraryActivityIds: string[];
+};
+const csvDimensions = [
+  'Environmental',
+  'Social',
+  'Emotional',
+  'Financial',
+  'Intellectual',
+  'Spiritual',
+  'Physical',
+] as const;
 const sampleCsv = `${csvDimensions.join(',')}\nCampus cleanup,Call a friend,Journal for five minutes,Review weekly spending,Read for pleasure,Practice gratitude,Take a short walk\nUse a reusable bottle,Share a meal,,,,Quiet reflection,Stretch for ten minutes`;
-const normalizeHeader=(value:string)=>value.normalize('NFKC').trim().toLocaleLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');
-const normalizeName=(value:string)=>value.normalize('NFKC').trim().toLocaleLowerCase().replace(/\s+/g,' ');
-const findHeader=(headers:string[],accepted:string[])=>headers.findIndex(header=>accepted.includes(header));
+const normalizeHeader = (value: string) =>
+  value.normalize('NFKC').trim().toLocaleLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+const normalizeName = (value: string) =>
+  value.normalize('NFKC').trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+const findHeader = (headers: string[], accepted: string[]) =>
+  headers.findIndex((header) => accepted.includes(header));
 
 /* DESIGN DECISION: CSV and Excel use the same seven-column layout. A normalized dimension + title key makes duplicate handling consistent in the file, UI, and database. */
 /* TODO(PRODUCTION): Store original import files and audit metadata in protected storage if administrators need import history or rollback. */
-function ActivitySelectionStep({value,onChange}:{value:ActivitySelection;onChange:(selection:ActivitySelection)=>void}) {
-  const [library,setLibrary]=useState<LibraryActivityChoice[]>([]);
-  const initializedLibrary=useRef(false);
-  const [fileName,setFileName]=useState('');
-  const [error,setError]=useState('');
-  const [duplicatesInFile,setDuplicatesInFile]=useState(0);
-  const normalize=(input:string)=>input.normalize('NFKC').trim().toLocaleLowerCase().replace(/\s+/g,' ');
-  const keyFor=(activity:ImportedActivity)=>`${activity.dimension}|${normalize(activity.title)}`;
-  useEffect(()=>{getSupabaseBrowserClient()?.from('activities').select('id,title,dimension').eq('is_active',true).order('dimension').order('title').then(({data})=>{const items=(data??[]) as LibraryActivityChoice[];setLibrary(items);if(!initializedLibrary.current){initializedLibrary.current=true;onChange({...value,libraryActivityIds:items.map(item=>item.id)});}});},[]); // eslint-disable-line react-hooks/exhaustive-deps
-  const importedKeys=value.activities.map(keyFor);
-  const selectedLibrary=library.filter(item=>value.libraryActivityIds.includes(item.id));
-  const libraryKeys=selectedLibrary.map(item=>`${item.dimension}|${normalize(item.title)}`);
-  const librarySet=new Set(libraryKeys);
-  const duplicatesInLibrary=importedKeys.filter(key=>librarySet.has(key)).length;
-  const count=value.mode==='library'?librarySet.size:value.mode==='csv'?value.activities.length:new Set([...libraryKeys,...importedKeys]).size;
+function ActivitySelectionStep({
+  value,
+  onChange,
+}: {
+  value: ActivitySelection;
+  onChange: (selection: ActivitySelection) => void;
+}) {
+  const [library, setLibrary] = useState<LibraryActivityChoice[]>([]);
+  const initializedLibrary = useRef(false);
+  const [fileName, setFileName] = useState('');
+  const [error, setError] = useState('');
+  const [duplicatesInFile, setDuplicatesInFile] = useState(0);
+  const normalize = (input: string) =>
+    input.normalize('NFKC').trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+  const keyFor = (activity: ImportedActivity) =>
+    `${activity.dimension}|${normalize(activity.title)}`;
+  useEffect(() => {
+    getSupabaseBrowserClient()
+      ?.from('activities')
+      .select('id,title,dimension')
+      .eq('is_active', true)
+      .order('dimension')
+      .order('title')
+      .then(({ data }) => {
+        const items = (data ?? []) as LibraryActivityChoice[];
+        setLibrary(items);
+        if (!initializedLibrary.current) {
+          initializedLibrary.current = true;
+          onChange({ ...value, libraryActivityIds: items.map((item) => item.id) });
+        }
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const importedKeys = value.activities.map(keyFor);
+  const selectedLibrary = library.filter((item) => value.libraryActivityIds.includes(item.id));
+  const libraryKeys = selectedLibrary.map((item) => `${item.dimension}|${normalize(item.title)}`);
+  const librarySet = new Set(libraryKeys);
+  const duplicatesInLibrary = importedKeys.filter((key) => librarySet.has(key)).length;
+  const count =
+    value.mode === 'library'
+      ? librarySet.size
+      : value.mode === 'csv'
+        ? value.activities.length
+        : new Set([...libraryKeys, ...importedKeys]).size;
 
-  async function parseSpreadsheet(file:File|undefined) {
-    setError('');setFileName(file?.name??'');setDuplicatesInFile(0);onChange({...value,activities:[]});
-    if(!file)return;
-    const extension=file.name.toLowerCase().split('.').pop();
-    if(!['csv','xlsx','xls'].includes(extension??'')){setError('Choose a CSV or Excel file (.csv, .xlsx, or .xls).');return;}
-    try{
-      const XLSX=await import('xlsx');
-      const workbook=XLSX.read(await file.arrayBuffer(),{type:'array'});
-      const sheet=workbook.Sheets[workbook.SheetNames[0]];
-      if(!sheet){setError('The workbook does not contain a worksheet.');return;}
-      const rows=XLSX.utils.sheet_to_json<(string|number|null)[]>(sheet,{header:1,raw:false,defval:''});
-      const headers=(rows.shift()??[]).map(cell=>String(cell).trim());
-      if(headers.length!==csvDimensions.length||headers.some((header,index)=>header!==csvDimensions[index])){setError(`The first row must contain exactly: ${csvDimensions.join(', ')}.`);return;}
-      const unique=new Map<string,ImportedActivity>();let duplicateCount=0;
-      for(const row of rows){if(row.length>csvDimensions.length&&row.slice(csvDimensions.length).some(cell=>String(cell).trim())){setError('A row contains data beyond the seven required columns.');return;}row.slice(0,csvDimensions.length).forEach((cell,index)=>{const title=String(cell??'').trim();if(!title)return;const activity={title,dimension:csvDimensions[index]} as ImportedActivity;const key=keyFor(activity);if(unique.has(key))duplicateCount+=1;else unique.set(key,activity);});}
-      if(!unique.size){setError('The file does not contain any activities.');return;}
-      setDuplicatesInFile(duplicateCount);onChange({...value,activities:[...unique.values()]});
-    }catch{setError('The file could not be read. Check that it is a valid CSV or Excel workbook.');}
+  async function parseSpreadsheet(file: File | undefined) {
+    setError('');
+    setFileName(file?.name ?? '');
+    setDuplicatesInFile(0);
+    onChange({ ...value, activities: [] });
+    if (!file) return;
+    const extension = file.name.toLowerCase().split('.').pop();
+    if (!['csv', 'xlsx', 'xls'].includes(extension ?? '')) {
+      setError('Choose a CSV or Excel file (.csv, .xlsx, or .xls).');
+      return;
+    }
+    try {
+      const XLSX = await import('xlsx');
+      const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      if (!sheet) {
+        setError('The workbook does not contain a worksheet.');
+        return;
+      }
+      const rows = XLSX.utils.sheet_to_json<(string | number | null)[]>(sheet, {
+        header: 1,
+        raw: false,
+        defval: '',
+      });
+      const headers = (rows.shift() ?? []).map((cell) => String(cell).trim());
+      if (
+        headers.length !== csvDimensions.length ||
+        headers.some((header, index) => header !== csvDimensions[index])
+      ) {
+        setError(`The first row must contain exactly: ${csvDimensions.join(', ')}.`);
+        return;
+      }
+      const unique = new Map<string, ImportedActivity>();
+      let duplicateCount = 0;
+      for (const row of rows) {
+        if (
+          row.length > csvDimensions.length &&
+          row.slice(csvDimensions.length).some((cell) => String(cell).trim())
+        ) {
+          setError('A row contains data beyond the seven required columns.');
+          return;
+        }
+        row.slice(0, csvDimensions.length).forEach((cell, index) => {
+          const title = String(cell ?? '').trim();
+          if (!title) return;
+          const activity = { title, dimension: csvDimensions[index] } as ImportedActivity;
+          const key = keyFor(activity);
+          if (unique.has(key)) duplicateCount += 1;
+          else unique.set(key, activity);
+        });
+      }
+      if (!unique.size) {
+        setError('The file does not contain any activities.');
+        return;
+      }
+      setDuplicatesInFile(duplicateCount);
+      onChange({ ...value, activities: [...unique.values()] });
+    } catch {
+      setError('The file could not be read. Check that it is a valid CSV or Excel workbook.');
+    }
   }
 
-  async function downloadExcelTemplate(){const XLSX=await import('xlsx');const workbook=XLSX.utils.book_new();const worksheet=XLSX.utils.aoa_to_sheet([csvDimensions as unknown as string[],['Campus cleanup','Call a friend','Journal for five minutes','Review weekly spending','Read for pleasure','Practice gratitude','Take a short walk']]);XLSX.utils.book_append_sheet(workbook,worksheet,'Activities');XLSX.writeFile(workbook,'wellbeing-activities-template.xlsx');}
-  function setMode(mode:ActivitySelectionMode){onChange({...value,mode});}
-  function toggleLibrary(id:string){onChange({...value,libraryActivityIds:value.libraryActivityIds.includes(id)?value.libraryActivityIds.filter(item=>item!==id):[...value.libraryActivityIds,id]});}
+  async function downloadExcelTemplate() {
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      csvDimensions as unknown as string[],
+      [
+        'Campus cleanup',
+        'Call a friend',
+        'Journal for five minutes',
+        'Review weekly spending',
+        'Read for pleasure',
+        'Practice gratitude',
+        'Take a short walk',
+      ],
+    ]);
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Activities');
+    XLSX.writeFile(workbook, 'wellbeing-activities-template.xlsx');
+  }
+  function setMode(mode: ActivitySelectionMode) {
+    onChange({ ...value, mode });
+  }
+  function toggleLibrary(id: string) {
+    onChange({
+      ...value,
+      libraryActivityIds: value.libraryActivityIds.includes(id)
+        ? value.libraryActivityIds.filter((item) => item !== id)
+        : [...value.libraryActivityIds, id],
+    });
+  }
 
-  return <div className="form-body activity-selection"><h3>Choose an activity source</h3><p>Select one source for this competition. You can change it later.</p><div className="activity-mode-cards"><button className={value.mode==='library'?'active':''} onClick={()=>setMode('library')}><Icon name="book"/><strong>Use Existing Activities</strong><small>Start with every activity, then uncheck any you do not want.</small></button><button className={value.mode==='csv'?'active':''} onClick={()=>setMode('csv')}><Icon name="arrow"/><strong>Upload Spreadsheet</strong><small>Use only activities from a CSV or Excel file.</small></button><button className={value.mode==='combined'?'active':''} onClick={()=>setMode('combined')}><Icon name="plus"/><strong>Combine Both</strong><small>Choose library activities and merge uploaded activities.</small></button></div>{value.mode!=='csv'&&<div className="library-activity-picker"><header><div><strong>Existing activity library</strong><span>Uncheck activities you do not want in this competition.</span></div><b>{value.libraryActivityIds.length} of {library.length}</b></header><div>{library.map(item=><label key={item.id}><input type="checkbox" checked={value.libraryActivityIds.includes(item.id)} onChange={()=>toggleLibrary(item.id)}/><span><strong>{item.title}</strong><small>{item.dimension}</small></span></label>)}</div></div>}{value.mode!=='library'&&<div className="csv-upload"><div><strong>Upload activity spreadsheet</strong><span>CSV or Excel with seven columns, one for each wellbeing dimension.</span></div><label><input type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" onChange={event=>parseSpreadsheet(event.target.files?.[0])}/><span>{fileName||'Choose CSV or Excel file'}</span></label><a download="wellbeing-activities-template.csv" href={`data:text/csv;charset=utf-8,${encodeURIComponent(sampleCsv)}`}>Download CSV template</a><button type="button" className="spreadsheet-template-button" onClick={downloadExcelTemplate}>Download Excel template</button>{error&&<p className="csv-error">{error}</p>}{value.activities.length>0&&<div className="csv-success"><Icon name="check" size={14}/><span><strong>{value.activities.length} unique activities found</strong>{duplicatesInFile>0&&<small>{duplicatesInFile} duplicate {duplicatesInFile===1?'entry':'entries'} removed inside the file.</small>}{duplicatesInLibrary>0&&<small>{duplicatesInLibrary} match selected library activities and will not be created twice.</small>}</span></div>}</div>}<div className="activity-count"><Icon name="check"/><div><strong>{count} activities selected</strong><span>{value.mode==='combined'?'Selected library activities plus unique uploaded activities.':value.mode==='csv'?'Unique activities from the uploaded file.':'Selected activities from the central Activity Library.'}</span></div></div></div>;
+  return (
+    <div className="form-body activity-selection">
+      <h3>Choose an activity source</h3>
+      <p>Select one source for this competition. You can change it later.</p>
+      <div className="activity-mode-cards">
+        <button
+          className={value.mode === 'library' ? 'active' : ''}
+          onClick={() => setMode('library')}
+        >
+          <Icon name="book" />
+          <strong>Use Existing Activities</strong>
+          <small>Start with every activity, then uncheck any you do not want.</small>
+        </button>
+        <button className={value.mode === 'csv' ? 'active' : ''} onClick={() => setMode('csv')}>
+          <Icon name="arrow" />
+          <strong>Upload Spreadsheet</strong>
+          <small>Use only activities from a CSV or Excel file.</small>
+        </button>
+        <button
+          className={value.mode === 'combined' ? 'active' : ''}
+          onClick={() => setMode('combined')}
+        >
+          <Icon name="plus" />
+          <strong>Combine Both</strong>
+          <small>Choose library activities and merge uploaded activities.</small>
+        </button>
+      </div>
+      {value.mode !== 'csv' && (
+        <div className="library-activity-picker">
+          <header>
+            <div>
+              <strong>Existing activity library</strong>
+              <span>Uncheck activities you do not want in this competition.</span>
+            </div>
+            <b>
+              {value.libraryActivityIds.length} of {library.length}
+            </b>
+          </header>
+          <div>
+            {library.map((item) => (
+              <label key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={value.libraryActivityIds.includes(item.id)}
+                  onChange={() => toggleLibrary(item.id)}
+                />
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.dimension}</small>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+      {value.mode !== 'library' && (
+        <div className="csv-upload">
+          <div>
+            <strong>Upload activity spreadsheet</strong>
+            <span>CSV or Excel with seven columns, one for each wellbeing dimension.</span>
+          </div>
+          <label>
+            <input
+              type="file"
+              accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+              onChange={(event) => parseSpreadsheet(event.target.files?.[0])}
+            />
+            <span>{fileName || 'Choose CSV or Excel file'}</span>
+          </label>
+          <a
+            download="wellbeing-activities-template.csv"
+            href={`data:text/csv;charset=utf-8,${encodeURIComponent(sampleCsv)}`}
+          >
+            Download CSV template
+          </a>
+          <button
+            type="button"
+            className="spreadsheet-template-button"
+            onClick={downloadExcelTemplate}
+          >
+            Download Excel template
+          </button>
+          {error && <p className="csv-error">{error}</p>}
+          {value.activities.length > 0 && (
+            <div className="csv-success">
+              <Icon name="check" size={14} />
+              <span>
+                <strong>{value.activities.length} unique activities found</strong>
+                {duplicatesInFile > 0 && (
+                  <small>
+                    {duplicatesInFile} duplicate {duplicatesInFile === 1 ? 'entry' : 'entries'}{' '}
+                    removed inside the file.
+                  </small>
+                )}
+                {duplicatesInLibrary > 0 && (
+                  <small>
+                    {duplicatesInLibrary} match selected library activities and will not be created
+                    twice.
+                  </small>
+                )}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+      <div className="activity-count">
+        <Icon name="check" />
+        <div>
+          <strong>{count} activities selected</strong>
+          <span>
+            {value.mode === 'combined'
+              ? 'Selected library activities plus unique uploaded activities.'
+              : value.mode === 'csv'
+                ? 'Unique activities from the uploaded file.'
+                : 'Selected activities from the central Activity Library.'}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function AdminHeading({eyebrow,title,text,action,onAction}:{eyebrow:string;title:string;text?:string;action?:string;onAction?:()=>void}){return <header className="admin-heading"><div>{eyebrow&&<span>{eyebrow}</span>}<h1>{title}</h1>{text&&<p>{text}</p>}</div>{action&&<button className="primary-button" onClick={onAction}><Icon name="plus"/>{action}</button>}</header>}
-function PanelHeading({title,action}:{title:string;action?:string}){return <header className="panel-heading"><h2>{title}</h2>{action&&<button>{action}</button>}</header>}
+function AdminHeading({
+  eyebrow,
+  title,
+  text,
+  action,
+  onAction,
+}: {
+  eyebrow: string;
+  title: string;
+  text?: string;
+  action?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <header className="admin-heading">
+      <div>
+        {eyebrow && <span>{eyebrow}</span>}
+        <h1>{title}</h1>
+        {text && <p>{text}</p>}
+      </div>
+      {action && (
+        <button className="primary-button" onClick={onAction}>
+          <Icon name="plus" />
+          {action}
+        </button>
+      )}
+    </header>
+  );
+}
+function PanelHeading({ title, action }: { title: string; action?: string }) {
+  return (
+    <header className="panel-heading">
+      <h2>{title}</h2>
+      {action && <button>{action}</button>}
+    </header>
+  );
+}
