@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { type Dimension } from './prototype-data';
 import { DimensionIcon, Icon, Logo } from './ui';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
+import { calculateProfileTotals, calculateProgress } from '../lib/student-progress';
+import { ActivityModal, type ActivityModalActivity } from './components/activity-modal';
 
 type StudentTab = 'Home' | 'My Challenges' | 'Ranking' | 'Profile';
 type StudentProfile = {
@@ -47,17 +49,7 @@ type JoinPreview = {
   participants: number;
   activities: number;
 };
-type StudentActivity = {
-  id: string;
-  title: string;
-  detail: string;
-  dimension: Dimension;
-  type: 'Timed' | 'Daily check-in';
-  duration: number;
-  points: number;
-  completed: boolean;
-  completedAt?: string;
-};
+type StudentActivity = ActivityModalActivity;
 type StudentTeamMember = { id: string; name: string; points: number; current: boolean };
 type CompletionProgress = { points: number; completedCount: number; activityCount: number };
 type ActivityCache = Record<string, StudentActivity[]>;
@@ -111,9 +103,7 @@ function mapCompetition(row: Record<string, unknown>): Competition {
     status: ended ? 'ended' : String(row.status),
     date: dates(String(row.start_at), endAt),
     endAt,
-    progress: Number(row.activity_count)
-      ? Math.round((Number(row.completed_count ?? 0) / Number(row.activity_count)) * 100)
-      : 0,
+    progress: calculateProgress(Number(row.completed_count ?? 0), Number(row.activity_count ?? 0)),
     activityCount: Number(row.activity_count ?? 0),
     completedCount: Number(row.completed_count ?? 0),
     points: Number(row.points ?? 0),
@@ -386,9 +376,7 @@ export default function StudentPlatform() {
             points: progress.points,
             completedCount: progress.completedCount,
             activityCount: progress.activityCount,
-            progress: progress.activityCount
-              ? Math.round((progress.completedCount / progress.activityCount) * 100)
-              : 0,
+            progress: calculateProgress(progress.completedCount, progress.activityCount),
           }
         : item;
     setJoined((current) => current.map(update));
@@ -1206,11 +1194,7 @@ function CompetitionDetail({
   }
   const completedItems = items.filter((item) => item.completed);
   const completed = completedItems.length;
-  const progress = ended
-    ? competition.progress
-    : items.length
-      ? Math.round((completed / items.length) * 100)
-      : 0;
+  const progress = ended ? competition.progress : calculateProgress(completed, items.length);
   return (
     <div className="student-page competition-detail">
       <button className="back-link" onClick={onBack}>
@@ -1649,54 +1633,6 @@ function CategorizedActivityList({
     </div>
   );
 }
-function ActivityModal({
-  activity,
-  onClose,
-  onComplete,
-}: {
-  activity: StudentActivity;
-  onClose: () => void;
-  onComplete: () => void;
-}) {
-  return (
-    <div className="modal-backdrop" onMouseDown={onClose}>
-      <section className="activity-modal" onMouseDown={(event) => event.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>
-          <Icon name="close" />
-        </button>
-        <DimensionIcon dimension={activity.dimension} size="lg" />
-        <span className="modal-dimension">{activity.dimension}</span>
-        <h2>{activity.title}</h2>
-        <p>{activity.detail}</p>
-        <div className="modal-meta">
-          <span>
-            <Icon name="clock" />
-            {activity.completedAt
-              ? completionDate(activity.completedAt)
-              : activity.type === 'Timed'
-                ? `${activity.duration} minutes`
-                : 'Daily check-in'}
-          </span>
-          <span>
-            <Icon name="spark" />
-            {activity.points} points
-          </span>
-        </div>
-        <button
-          className="primary-button"
-          disabled={activity.completed}
-          onClick={() => {
-            onComplete();
-            onClose();
-          }}
-        >
-          {activity.completed ? 'Completed' : 'Complete activity'}
-        </button>
-      </section>
-    </div>
-  );
-}
-
 function Ranking({ profile, joined }: { profile: StudentProfile; joined: Competition[] }) {
   const [mode, setMode] = useState<'Individual' | 'Group'>('Individual');
   const joinedInMode = joined.filter((item) => item.type === mode);
@@ -1914,8 +1850,7 @@ function Profile({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(profile);
-  const totalPoints = joined.reduce((sum, item) => sum + item.points, 0);
-  const totalCompleted = joined.reduce((sum, item) => sum + item.completedCount, 0);
+  const { points: totalPoints, completed: totalCompleted } = calculateProfileTotals(joined);
   return (
     <div className="student-page">
       <PageIntro title="Profile" />
