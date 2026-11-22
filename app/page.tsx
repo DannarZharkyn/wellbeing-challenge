@@ -914,11 +914,27 @@ function mapJoinPreview(row: Record<string, unknown>): JoinPreview {
   };
 }
 function PreviewDetails({ preview }: { preview: JoinPreview }) {
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const description = preview.description || 'No additional description has been provided.';
+  const hasLongDescription = description.length > 180;
+
   return (
     <>
-      <p className="join-description">
-        {preview.description || 'No additional description has been provided.'}
-      </p>
+      <div className="join-description-wrap">
+        <p className={`join-description${descriptionExpanded ? ' is-expanded' : ''}`}>
+          {description}
+        </p>
+        {hasLongDescription && (
+          <button
+            className="join-description-toggle"
+            type="button"
+            aria-expanded={descriptionExpanded}
+            onClick={() => setDescriptionExpanded((expanded) => !expanded)}
+          >
+            {descriptionExpanded ? 'Show less' : 'More'}
+          </button>
+        )}
+      </div>
       <div className="join-preview-stats">
         <article>
           <Icon name="users" />

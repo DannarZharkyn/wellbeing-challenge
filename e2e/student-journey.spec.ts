@@ -13,7 +13,8 @@ const competition = {
   id: competitionId,
   competition_id: competitionId,
   name: 'Playwright Wellbeing Challenge',
-  description: 'A safe browser-test challenge that never touches production data.',
+  description:
+    'A safe browser-test challenge that never touches production data. This deliberately long description verifies that competition information stays compact before a student joins, while still allowing the student to expand and read every detail when they choose.',
   competition_type: 'individual',
   status: 'active',
   start_at: '2026-11-01T14:00:00.000Z',
@@ -127,6 +128,7 @@ async function mockStudentBackend(page: Page, state: JourneyState) {
 test('a new student registers, joins a challenge, and completes an activity', async ({ page }) => {
   const state: JourneyState = { joined: false, completed: false };
   page.on('pageerror', (error) => console.error(`Browser error: ${error.message}`));
+  await page.clock.setFixedTime(new Date('2026-11-18T17:00:00.000Z'));
   await mockStudentBackend(page, state);
 
   await page.goto('/');
@@ -146,6 +148,11 @@ test('a new student registers, joins a challenge, and completes an activity', as
     page.getByRole('heading', { level: 2, name: 'Playwright Wellbeing Challenge' }),
   ).toBeVisible();
   await expect(page.getByText('4', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'More' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Join challenge' })).toBeVisible();
+  await page.getByRole('button', { name: 'More' }).click();
+  await expect(page.getByRole('button', { name: 'Show less' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show less' }).click();
   await page.getByRole('button', { name: 'Join challenge' }).click();
 
   await expect(page).toHaveURL('/challenges');

@@ -1189,6 +1189,13 @@ body * {
   border-radius: 22px;
   background: #fff;
 }
+.group-code-modal,
+.join-preview-modal {
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
 .group-code-modal .modal-icon {
   width: 52px;
   height: 52px;
@@ -1263,10 +1270,37 @@ body * {
   font-size: 25px;
 }
 .join-description {
-  margin: 0 0 18px;
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   color: #5f6e68;
   font-size: 13px;
   line-height: 1.55;
+}
+.join-description.is-expanded {
+  display: block;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+.join-description-wrap {
+  margin: 0 0 18px;
+  text-align: left;
+}
+.join-description-toggle {
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #397760;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.code-confirm .join-description-toggle {
+  width: auto;
+  margin-top: 6px;
 }
 .join-preview-stats {
   display: grid;
@@ -1306,9 +1340,8 @@ body * {
 .join-preview-actions button {
   justify-content: center;
 }
-.code-confirm .join-description {
+.code-confirm .join-description-wrap {
   margin-top: 13px;
-  text-align: left;
 }
 .code-confirm .join-preview-stats {
   margin-bottom: 14px;
