@@ -3,6 +3,7 @@ import { expect, test, type Page, type Route } from '@playwright/test';
 const profileId = '11111111-1111-4111-8111-111111111111';
 const competitionId = '22222222-2222-4222-8222-222222222222';
 const activityId = '33333333-3333-4333-8333-333333333333';
+const attemptToken = '44444444-4444-4444-8444-444444444444';
 
 type JourneyState = {
   joined: boolean;
@@ -105,7 +106,20 @@ async function mockStudentBackend(page: Page, state: JourneyState) {
           },
         ]);
         return;
-      case 'complete_activity_with_progress':
+      case 'start_timed_activity':
+      case 'get_timed_activity_attempt':
+        await fulfillJson(route, [
+          {
+            attempt_token: attemptToken,
+            started_at: '2026-11-18T16:50:00.000Z',
+            ready_at: '2026-11-18T17:00:00.000Z',
+          },
+        ]);
+        return;
+      case 'cancel_timed_activity':
+        await fulfillJson(route, null);
+        return;
+      case 'complete_timed_activity_with_progress':
         state.completed = true;
         await fulfillJson(route, [
           {
@@ -171,7 +185,9 @@ test('a new student registers, joins a challenge, and completes an activity', as
     page.getByRole('heading', { level: 2, name: 'Take a ten-minute mindful walk' }),
   ).toBeVisible();
   await expect(page.getByText('50 points')).toBeVisible();
-  await page.getByRole('button', { name: 'Complete activity' }).click();
+  await page.getByRole('button', { name: 'Start activity' }).click();
+  await expect(page.getByText('Activity time complete')).toBeVisible();
+  await page.getByRole('button', { name: 'Finish activity' }).click();
 
   await expect(page.getByText('100%')).toBeVisible();
   await expect(page.getByText('Everything is completed!')).toBeVisible();
