@@ -1,12 +1,16 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { type Dimension } from './prototype-data';
 import { DimensionIcon, Icon, Logo } from './ui';
 import { getSupabaseBrowserClient } from '../lib/supabase/client';
 import { calculateProfileTotals, calculateProgress } from '../lib/student-progress';
-import { ActivityModal, type ActivityModalActivity } from './components/activity-modal';
+import {
+  ActivityModal,
+  type ActivityModalActivity,
+  type TimedActivityAttempt,
+} from './components/activity-modal';
 
 type StudentTab = 'Home' | 'My Challenges' | 'Ranking' | 'Profile';
 type StudentProfile = {
@@ -57,6 +61,7 @@ type TeamCache = Record<string, StudentTeamMember[]>;
 const profileKey = 'wellbeing-student-profile';
 const studentTabKey = 'wellbeing-student-tab';
 const studentCompetitionKey = 'wellbeing-student-competition';
+const timedActivityKey = (profileId: string) => `wellbeing-timed-activity:${profileId}`;
 const tabPaths: Record<StudentTab, string> = {
   Home: '/',
   'My Challenges': '/challenges',
@@ -1153,6 +1158,27 @@ function CompetitionDetail({
     completed: number;
   } | null>(null);
   const longDescription = competition.description.length > 150;
+  const timerStorageKey = timedActivityKey(profile.id);
+
+  useEffect(() => {
+    if (active || ended) return;
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(timerStorageKey) ?? '') as {
+        competitionId?: string;
+        activityId?: string;
+      };
+      if (stored.competitionId !== competition.id) return;
+      const restoredActivity = items.find(
+        (item) => item.id === stored.activityId && item.type === 'Timed' && !item.completed,
+      );
+      if (!restoredActivity) return;
+      // Route restoration happens after enrollment data loads; reopen the active timer afterward.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActive(restoredActivity);
+    } catch {
+      // Missing or invalid tab state means there is no resumable timer in this tab.
+    }
+  }, [active, competition.id, ended, items, timerStorageKey]);
   useEffect(() => {
     if (!ended) return;
     client
@@ -1177,29 +1203,31 @@ function CompetitionDetail({
           });
       });
   }, [client, competition.completedCount, competition.id, competition.points, ended, profile.id]);
-  async function complete(activity: StudentActivity) {
+  async function complete(activity: StudentActivity, attemptToken?: string) {
     if (ended || activity.completed) return;
     setLoadError('');
+    if (activity.type === 'Timed' && !attemptToken)
+      throw new Error('Start the activity timer before completing this activity.');
+    const rpc =
+      activity.type === 'Timed'
+        ? 'complete_timed_activity_with_progress'
+        : 'complete_activity_with_progress';
+    const { data, error } = await client!.rpc(rpc, {
+      p_profile_id: profile.id,
+      p_competition_id: competition.id,
+      p_activity_id: activity.id,
+      ...(attemptToken ? { p_attempt_token: attemptToken } : {}),
+    });
+    if (error) {
+      setLoadError(error.message);
+      throw new Error(error.message);
+    }
     const now = new Date().toISOString();
     setItems((current) =>
       current.map((item) =>
         item.id === activity.id ? { ...item, completed: true, completedAt: now } : item,
       ),
     );
-    const { data, error } = await client!.rpc('complete_activity_with_progress', {
-      p_profile_id: profile.id,
-      p_competition_id: competition.id,
-      p_activity_id: activity.id,
-    });
-    if (error) {
-      setItems((current) =>
-        current.map((item) =>
-          item.id === activity.id ? { ...item, completed: false, completedAt: undefined } : item,
-        ),
-      );
-      setLoadError(error.message);
-      return;
-    }
     const result = data?.[0];
     if (result)
       onProgressChanged(activity.id, {
@@ -1208,6 +1236,73 @@ function CompetitionDetail({
         activityCount: Number(result.activity_count),
       });
   }
+  const startTimedActivity = useCallback(
+    async (activityId: string): Promise<TimedActivityAttempt> => {
+      const { data, error } = await client!.rpc('start_timed_activity', {
+        p_profile_id: profile.id,
+        p_competition_id: competition.id,
+        p_activity_id: activityId,
+      });
+      const result = data?.[0];
+      if (error || !result) throw new Error(error?.message ?? 'The timer could not be started.');
+      return {
+        token: String(result.attempt_token),
+        startedAt: String(result.started_at),
+        readyAt: String(result.ready_at),
+      };
+    },
+    [client, competition.id, profile.id],
+  );
+  const resumeTimedActivity = useCallback(
+    async (activityId: string, token: string): Promise<TimedActivityAttempt | null> => {
+      const { data, error } = await client!.rpc('get_timed_activity_attempt', {
+        p_profile_id: profile.id,
+        p_competition_id: competition.id,
+        p_activity_id: activityId,
+        p_attempt_token: token,
+      });
+      if (error) throw new Error(error.message);
+      const result = data?.[0];
+      return result
+        ? {
+            token: String(result.attempt_token),
+            startedAt: String(result.started_at),
+            readyAt: String(result.ready_at),
+          }
+        : null;
+    },
+    [client, competition.id, profile.id],
+  );
+  const cancelTimedActivity = useCallback(
+    async (token: string) => {
+      const { error } = await client!.rpc('cancel_timed_activity', {
+        p_profile_id: profile.id,
+        p_attempt_token: token,
+      });
+      if (error) throw new Error(error.message);
+    },
+    [client, profile.id],
+  );
+  const timedControls = useMemo(
+    () =>
+      active?.type === 'Timed'
+        ? {
+            storageKey: timerStorageKey,
+            competitionId: competition.id,
+            start: () => startTimedActivity(active.id),
+            resume: (token: string) => resumeTimedActivity(active.id, token),
+            cancel: cancelTimedActivity,
+          }
+        : undefined,
+    [
+      active,
+      cancelTimedActivity,
+      competition.id,
+      resumeTimedActivity,
+      startTimedActivity,
+      timerStorageKey,
+    ],
+  );
   const completedItems = items.filter((item) => item.completed);
   const completed = completedItems.length;
   const progress = ended ? competition.progress : calculateProgress(completed, items.length);
@@ -1320,7 +1415,8 @@ function CompetitionDetail({
         <ActivityModal
           activity={active}
           onClose={() => setActive(null)}
-          onComplete={() => complete(active)}
+          onComplete={(attemptToken) => complete(active, attemptToken)}
+          timedControls={timedControls}
         />
       )}
     </div>

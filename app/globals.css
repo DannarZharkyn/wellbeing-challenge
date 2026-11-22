@@ -1158,9 +1158,15 @@ a {
 }
 .timer-demo i {
   display: block;
-  width: 12%;
   height: 100%;
   background: var(--green);
+  transition: width 0.5s linear;
+}
+.timer-demo > p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
 }
 .timer-demo button {
   margin-top: 20px;
@@ -1169,6 +1175,9 @@ a {
   color: #a34c3f;
   font-size: 10px;
   font-weight: 800;
+}
+.timer-demo button:disabled {
+  opacity: 0.55;
 }
 
 /* admin */
