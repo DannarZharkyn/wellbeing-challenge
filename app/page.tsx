@@ -794,13 +794,13 @@ function Challenges({
           <section className="challenges-empty">
             <Icon name="target" size={34} />
             <h2>You&apos;re not part of any challenges yet!</h2>
-            <p>Explore an individual challenge or enter any competition code.</p>
+            <p>Explore an individual challenge or enter an invitation code.</p>
             <div>
               <a className="primary-button" href="#available-challenges">
                 Explore Challenges
               </a>
               <button className="secondary-button" onClick={onCode}>
-                Enter Competition Code
+                Enter Code
               </button>
             </div>
           </section>
@@ -809,7 +809,7 @@ function Challenges({
       <div className="challenge-actions">
         <button onClick={onCode}>
           <Icon name="target" />
-          Enter Competition Code
+          Enter Code
         </button>
       </div>
       {past.length > 0 && (
@@ -1028,7 +1028,7 @@ function CodeModal({
     });
     const found = data?.[0];
     if (findError || !found) {
-      setError('That competition code is not valid.');
+      setError('That code is not valid.');
       setMatch(null);
       return;
     }
@@ -1063,15 +1063,15 @@ function CodeModal({
         <span className="modal-icon">
           <Icon name="target" />
         </span>
-        <h2>Enter competition code</h2>
+        <h2>Enter code</h2>
         <p>
-          Enter an individual or group competition code. A team-specific code will also assign you
-          to that team automatically.
+          Enter an individual or group competition code, or use a team-specific code to join that
+          team directly. Ask a teammate or the organizer for the right code.
         </p>
         {!match ? (
           <>
             <label>
-              Competition code
+              Code
               <input
                 value={code}
                 onChange={(event) => {
@@ -1082,7 +1082,7 @@ function CodeModal({
             </label>
             {error && <p className="code-error">{error}</p>}
             <button className="primary-button" disabled={!code.trim()} onClick={find}>
-              Find competition
+              Continue
             </button>
           </>
         ) : (
