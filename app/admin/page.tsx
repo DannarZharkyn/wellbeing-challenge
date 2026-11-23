@@ -796,16 +796,6 @@ function CompetitionOverview({
       <div className="event-accordions">
         <details>
           <summary>
-            <Icon name="qr" />
-            Participant QR Code <span>⌄</span>
-          </summary>
-          <p>
-            Students scan this competition code to open registration. Team invitations remain
-            team-specific.
-          </p>
-        </details>
-        <details>
-          <summary>
             <Icon name="book" />
             Competition Instructions <span>⌄</span>
           </summary>
