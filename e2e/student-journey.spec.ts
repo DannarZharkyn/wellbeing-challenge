@@ -8,6 +8,7 @@ const attemptToken = '44444444-4444-4444-8444-444444444444';
 type JourneyState = {
   joined: boolean;
   completed: boolean;
+  termsAccepted: boolean;
 };
 
 const competition = {
@@ -70,6 +71,13 @@ async function mockStudentBackend(page: Page, state: JourneyState) {
             college: 'College of Arts & Sciences',
           },
         ]);
+        return;
+      case 'has_current_participant_terms_acceptance':
+        await fulfillJson(route, state.termsAccepted);
+        return;
+      case 'accept_current_participant_terms':
+        state.termsAccepted = true;
+        await fulfillJson(route, '2026-11-23T15:00:00.000Z');
         return;
       case 'list_student_enrollments':
         await fulfillJson(
@@ -140,7 +148,7 @@ async function mockStudentBackend(page: Page, state: JourneyState) {
 }
 
 test('a new student registers, joins a challenge, and completes an activity', async ({ page }) => {
-  const state: JourneyState = { joined: false, completed: false };
+  const state: JourneyState = { joined: false, completed: false, termsAccepted: false };
   page.on('pageerror', (error) => console.error(`Browser error: ${error.message}`));
   await page.clock.setFixedTime(new Date('2026-11-18T17:00:00.000Z'));
   await mockStudentBackend(page, state);
@@ -153,6 +161,12 @@ test('a new student registers, joins a challenge, and completes an activity', as
   await page.getByLabel('Email address').fill('avery.tester@bu.edu');
   await page.getByLabel('College').selectOption({ label: 'College of Arts & Sciences' });
   await page.getByRole('button', { name: /Get Started/i }).click();
+
+  await expect(page.getByRole('heading', { name: 'Before you continue' })).toBeVisible();
+  const continueButton = page.getByRole('button', { name: 'Agree and continue' });
+  await expect(continueButton).toBeDisabled();
+  await page.getByRole('checkbox').check();
+  await continueButton.click();
 
   await expect(page.getByRole('heading', { name: 'Welcome, Avery!' })).toBeVisible();
   await expect(page.getByText('Playwright Wellbeing Challenge')).toBeVisible();

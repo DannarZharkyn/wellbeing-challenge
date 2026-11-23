@@ -11,6 +11,7 @@ import {
   type ActivityModalActivity,
   type TimedActivityAttempt,
 } from './components/activity-modal';
+import { ParticipantAgreement } from './components/participant-agreement';
 
 type StudentTab = 'Home' | 'My Challenges' | 'Ranking' | 'Profile';
 type StudentProfile = {
@@ -158,6 +159,8 @@ export default function StudentPlatform() {
   const [ready, setReady] = useState(false);
   const [competitionsReady, setCompetitionsReady] = useState(false);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
+  const [termsReady, setTermsReady] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [available, setAvailable] = useState<Competition[]>([]);
   const [joined, setJoined] = useState<Competition[]>([]);
   const [activityCache, setActivityCache] = useState<ActivityCache>({});
@@ -200,6 +203,22 @@ export default function StudentPlatform() {
       window.removeEventListener('popstate', syncRoute);
     };
   }, [syncRoute]);
+  useEffect(() => {
+    if (!ready) return;
+    if (!profile || !client) return;
+    let active = true;
+    void client
+      .rpc('has_current_participant_terms_acceptance', { p_profile_id: profile.id })
+      .then(({ data, error }) => {
+        if (!active) return;
+        setTermsAccepted(!error && Boolean(data));
+        setTermsReady(true);
+        if (error) setMessage(error.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [client, profile, ready]);
   const loadCompetitions = useCallback(
     async (profileId?: string) => {
       if (!client) {
@@ -257,10 +276,10 @@ export default function StudentPlatform() {
     [client],
   );
   useEffect(() => {
-    if (!ready) return;
-    const timer = window.setTimeout(() => void loadCompetitions(profile?.id), 0);
+    if (!ready || !termsReady || !profile || !termsAccepted) return;
+    const timer = window.setTimeout(() => void loadCompetitions(profile.id), 0);
     return () => window.clearTimeout(timer);
-  }, [ready, profile?.id, loadCompetitions]);
+  }, [ready, profile, termsAccepted, termsReady, loadCompetitions]);
   // Route changes intentionally synchronize the selected competition after enrollment data is available.
   useEffect(() => {
     if (!competitionsReady) return;
@@ -315,6 +334,8 @@ export default function StudentPlatform() {
         };
     localStorage.setItem(profileKey, JSON.stringify(next));
     setCompetitionsReady(false);
+    setTermsReady(false);
+    setTermsAccepted(false);
     setMessage('');
     setProfile(next);
   }
@@ -339,7 +360,25 @@ export default function StudentPlatform() {
     };
     localStorage.setItem(profileKey, JSON.stringify(next));
     setProfile(next);
+    if (!profile || input.email.trim().toLowerCase() !== profile.email.trim().toLowerCase()) {
+      setTermsAccepted(false);
+      setTermsReady(false);
+    }
     setMessage('Profile updated');
+  }
+  async function acceptParticipantTerms() {
+    if (!client || !profile) return;
+    setMessage('');
+    const { error } = await client.rpc('accept_current_participant_terms', {
+      p_profile_id: profile.id,
+      p_user_agent: navigator.userAgent,
+    });
+    if (error) {
+      setMessage(error.message);
+      throw new Error(error.message);
+    }
+    setTermsAccepted(true);
+    setCompetitionsReady(false);
   }
   async function joinIndividual(id: string) {
     if (!client || !profile) return;
@@ -425,6 +464,8 @@ export default function StudentPlatform() {
     localStorage.removeItem(studentCompetitionKey);
     setMessage('');
     setProfile(null);
+    setTermsAccepted(false);
+    setTermsReady(true);
     setJoined([]);
     setAvailable([]);
     setActivityCache({});
@@ -434,7 +475,7 @@ export default function StudentPlatform() {
     setTab('Home');
     window.history.replaceState({}, '', tabPaths.Home);
   }
-  if (!ready || (profile && !competitionsReady))
+  if (!ready || (profile && !termsReady) || (profile && termsAccepted && !competitionsReady))
     return (
       <main className="student-app student-loading">
         <Logo />
@@ -442,6 +483,15 @@ export default function StudentPlatform() {
       </main>
     );
   if (!profile) return <RegistrationScreen onRegister={register} error={message} />;
+  if (!termsAccepted)
+    return (
+      <ParticipantAgreement
+        participantName={profile.firstName}
+        email={profile.email}
+        error={message}
+        onAccept={acceptParticipantTerms}
+      />
+    );
   const initials = `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase();
   return (
     <main className="student-app">
