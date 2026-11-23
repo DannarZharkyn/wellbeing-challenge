@@ -150,6 +150,8 @@ async function mockStudentBackend(page: Page, state: JourneyState) {
 test('a new student registers, joins a challenge, and completes an activity', async ({ page }) => {
   const state: JourneyState = { joined: false, completed: false, termsAccepted: false };
   page.on('pageerror', (error) => console.error(`Browser error: ${error.message}`));
+  // The app stamps a new completion with the browser's current time, so freeze the clock at the
+  // same instant the mocked backend returns; otherwise the date assertion only passes on Nov 18.
   await page.clock.setFixedTime(new Date('2026-11-18T17:00:00.000Z'));
   await mockStudentBackend(page, state);
 
